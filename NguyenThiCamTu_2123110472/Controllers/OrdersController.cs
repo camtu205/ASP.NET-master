@@ -122,5 +122,32 @@ namespace NguyenThiCamTu_2123110472.Controllers
 
             return CreatedAtAction("GetOrder", new { id = order.Id }, order);
         }
+        [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> DeleteOrder(int id)
+        {
+            var order = await _context.Orders
+                .Include(o => o.OrderDetails)
+                .FirstOrDefaultAsync(o => o.Id == id);
+
+            if (order == null) return NotFound();
+
+            // Reverse inventory for products in order
+            foreach (var od in order.OrderDetails)
+            {
+                if (od.ProductId != null)
+                {
+                    var product = await _context.Products.FindAsync(od.ProductId);
+                    if (product != null)
+                    {
+                        product.StockQuantity += od.Quantity;
+                    }
+                }
+            }
+
+            _context.Orders.Remove(order);
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
     }
 }

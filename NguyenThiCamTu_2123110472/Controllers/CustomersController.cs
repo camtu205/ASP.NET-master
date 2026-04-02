@@ -86,6 +86,12 @@ namespace NguyenThiCamTu_2123110472.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCustomer(int id)
         {
+            var hasAppointments = await _context.Appointments.AnyAsync(a => a.CustomerId == id);
+            if (hasAppointments)
+            {
+                return BadRequest("Khách hàng này hiện đang có lịch hẹn. Vui lòng hủy các lịch hẹn trước khi xóa khách hàng.");
+            }
+
             var customer = await _context.Customers.FindAsync(id);
             if (customer == null)
             {

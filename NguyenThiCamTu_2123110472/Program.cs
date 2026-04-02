@@ -6,7 +6,12 @@ using Microsoft.OpenApi.Models;
 using NguyenThiCamTu_2123110472.Data;
 using NguyenThiCamTu_2123110472.Services;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions 
+{ 
+    Args = args,
+    ContentRootPath = Directory.GetCurrentDirectory(),
+    WebRootPath = "wwwroot"
+});
 
 // Add services to the container.
 builder.Services.AddHttpContextAccessor();
@@ -51,6 +56,16 @@ builder.Services.AddSwaggerGen(c =>
 var jwtSettings = builder.Configuration.GetSection("Jwt");
 var secretKey = jwtSettings["Key"] ?? "Secret";
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -78,6 +93,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
+// Enable Static Files and Default Files (index.html)
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
+app.UseCors("AllowAll");
+
 // Configure the HTTP request pipeline.
 app.UseSwagger();
 app.UseSwaggerUI();
@@ -89,11 +110,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Redirect root to swagger
-app.MapGet("/", context =>
-{
-    context.Response.Redirect("/swagger");
-    return Task.CompletedTask;
-});
+// Handle SPA routing
+app.MapFallbackToFile("index.html");
 
 app.Run();

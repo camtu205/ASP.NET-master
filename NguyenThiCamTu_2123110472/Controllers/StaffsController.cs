@@ -38,6 +38,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<Staff>> PostStaff(Staff staff)
         {
             _context.Staffs.Add(staff);
@@ -47,6 +48,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutStaff(int id, Staff staff)
         {
             if (id != staff.Id)
@@ -76,6 +78,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteStaff(int id)
         {
             var staff = await _context.Staffs.FindAsync(id);

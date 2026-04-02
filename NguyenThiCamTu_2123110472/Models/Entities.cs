@@ -30,10 +30,13 @@ namespace NguyenThiCamTu_2123110472.Models
         [MaxLength(100)]
         public string FullName { get; set; } = string.Empty;
 
+        [Required]
         [MaxLength(20)]
+        [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại phải bắt đầu bằng số 0 và có đúng 10 chữ số.")]
         public string PhoneNumber { get; set; } = string.Empty;
 
         [MaxLength(100)]
+        [EmailAddress(ErrorMessage = "Địa chỉ Email không hợp lệ.")]
         public string Email { get; set; } = string.Empty;
 
         public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
@@ -53,8 +56,10 @@ namespace NguyenThiCamTu_2123110472.Models
         public string Description { get; set; } = string.Empty;
 
         [Column(TypeName = "decimal(18,2)")]
+        [Range(0, double.MaxValue, ErrorMessage = "Giá dịch vụ không được nhỏ hơn 0.")]
         public decimal Price { get; set; }
 
+        [Range(0, int.MaxValue, ErrorMessage = "Thời gian không được nhỏ hơn 0.")]
         public int DurationMinutes { get; set; }
 
         public int? CategoryId { get; set; }
@@ -77,8 +82,10 @@ namespace NguyenThiCamTu_2123110472.Models
         public string Description { get; set; } = string.Empty;
 
         [Column(TypeName = "decimal(18,2)")]
+        [Range(0, double.MaxValue, ErrorMessage = "Giá sản phẩm không được nhỏ hơn 0.")]
         public decimal Price { get; set; }
 
+        [Range(0, int.MaxValue, ErrorMessage = "Số lượng tồn kho không được nhỏ hơn 0.")]
         public int StockQuantity { get; set; }
 
         public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
@@ -93,7 +100,9 @@ namespace NguyenThiCamTu_2123110472.Models
         [MaxLength(100)]
         public string FullName { get; set; } = string.Empty;
 
+        [Required]
         [MaxLength(20)]
+        [RegularExpression(@"^0\d{9}$", ErrorMessage = "Số điện thoại phải bắt đầu bằng số 0 và có đúng 10 chữ số.")]
         public string PhoneNumber { get; set; } = string.Empty;
 
         [MaxLength(100)]
@@ -216,6 +225,7 @@ namespace NguyenThiCamTu_2123110472.Models
         public string Name { get; set; } = string.Empty;
 
         [Column(TypeName = "decimal(5,2)")]
+        [Range(0, 100, ErrorMessage = "Khuyến mãi phải từ 0 đến 100%.")]
         public decimal DiscountPercent { get; set; }
 
         public DateTime StartDate { get; set; }
