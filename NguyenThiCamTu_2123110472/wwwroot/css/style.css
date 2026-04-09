@@ -47,11 +47,22 @@ body {
     padding: 24px;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start; /* Thay đổi từ space-between để nội dung tự nhiên hơn khi cuộn */
     height: 100vh;
     position: sticky;
     top: 0;
     z-index: 100;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+    background: rgba(244, 114, 182, 0.2);
+    border-radius: 10px;
 }
 
 .logo {
@@ -426,6 +437,20 @@ tr:hover {
 
 .btn-edit:hover {
     background: #1E90FF;
+}
+
+/* Form Validation Styles */
+.input-error {
+    border-color: #EF4444 !SUGGESTION !IMPORTANT;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1) !IMPORTANT;
+}
+
+.error-text {
+    color: #EF4444;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-top: 4px;
+    display: block;
 }
 
 /* Utilities */

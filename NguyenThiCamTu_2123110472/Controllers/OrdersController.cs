@@ -52,6 +52,9 @@ namespace NguyenThiCamTu_2123110472.Controllers
         {
             var appointment = await _context.Appointments
                 .Include(a => a.AppointmentDetails)
+                .Include(a => a.Bed)
+                    .ThenInclude(b => b.Room)
+                        .ThenInclude(r => r.RoomType)
                 .FirstOrDefaultAsync(a => a.Id == request.AppointmentId);
 
             if (appointment == null || appointment.Status != "Done")
@@ -77,11 +80,10 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 {
                     ServiceId = appDetail.ServiceId,
                     Quantity = 1,
-                    UnitPrice = appDetail.PriceAtTime,
-                    SubTotal = appDetail.PriceAtTime
+                    Price = appDetail.Price
                 };
                 order.OrderDetails.Add(od);
-                total += od.SubTotal;
+                total += od.Price * od.Quantity;
             }
 
             // Products
@@ -94,11 +96,10 @@ namespace NguyenThiCamTu_2123110472.Controllers
                     {
                         ProductId = product.Id,
                         Quantity = 1,
-                        UnitPrice = product.Price,
-                        SubTotal = product.Price
+                        Price = product.Price
                     };
                     order.OrderDetails.Add(od);
-                    total += od.SubTotal;
+                    total += od.Price * od.Quantity;
                     
                     product.StockQuantity -= 1; // Giảm tồn kho
                 }
@@ -115,9 +116,42 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 }
             }
 
+            // Apply Room Type Multiplier
+            if (appointment.Bed?.Room?.RoomType != null)
+            {
+                total *= appointment.Bed.Room.RoomType.PriceMultiplier;
+            }
+
             order.TotalAmount = total;
             
             _context.Orders.Add(order);
+
+            // Quy đổi điểm thưởng: 10,000đ = 1 điểm
+            int earnedPoints = (int)(total / 10000);
+            if (earnedPoints > 0)
+            {
+                var lp = await _context.LoyaltyPoints.FirstOrDefaultAsync(x => x.CustomerId == order.CustomerId);
+                if (lp == null)
+                {
+                    lp = new LoyaltyPoint { CustomerId = order.CustomerId, Points = earnedPoints, UpdatedDate = DateTime.UtcNow };
+                    _context.LoyaltyPoints.Add(lp);
+                }
+                else
+                {
+                    lp.Points += earnedPoints;
+                    lp.UpdatedDate = DateTime.UtcNow;
+                }
+            }
+
+            // Thông báo thanh toán thành công
+            _context.Notifications.Add(new Notification
+            {
+                Title = "Thanh toán thành công",
+                Message = $"Hóa đơn #{order.Id} trị giá {total:N0}đ đã được thanh toán. Khách hàng nhận được {earnedPoints} điểm thưởng.",
+                CreatedDate = DateTime.UtcNow,
+                UserId = 1
+            });
+
             await _context.SaveChangesAsync();
 
             return CreatedAtAction("GetOrder", new { id = order.Id }, order);

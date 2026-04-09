@@ -17,7 +17,10 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options => {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -58,12 +61,16 @@ var secretKey = jwtSettings["Key"] ?? "Secret";
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", builder =>
+    options.AddPolicy("AllowVercel", builder =>
     {
-        builder.AllowAnyOrigin()
+        builder.WithOrigins("https://*.vercel.app") // Cho phép tất cả subdomains của Vercel
+               .SetIsOriginAllowedToAllowWildcardSubdomains()
                .AllowAnyMethod()
-               .AllowAnyHeader();
+               .AllowAnyHeader()
+               .AllowCredentials();
     });
+    // Giữ lại AllowAll cho dev environment nếu cần
+    options.AddPolicy("AllowAll", builder => builder.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 
 builder.Services.AddAuthentication(options =>
@@ -87,9 +94,9 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// Configure Entity Framework Core with SQL Server
+// Configure Entity Framework Core with PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 var app = builder.Build();
 
@@ -97,6 +104,7 @@ var app = builder.Build();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
+app.UseCors("AllowVercel");
 app.UseCors("AllowAll");
 
 // Configure the HTTP request pipeline.

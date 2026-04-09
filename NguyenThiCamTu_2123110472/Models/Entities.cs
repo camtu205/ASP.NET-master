@@ -19,6 +19,8 @@ namespace NguyenThiCamTu_2123110472.Models
         [Required]
         [MaxLength(20)]
         public string Role { get; set; } = "Staff"; // Admin, Staff
+
+        public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
     }
 
     public class Customer
@@ -42,6 +44,8 @@ namespace NguyenThiCamTu_2123110472.Models
         public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
         public ICollection<Order> Orders { get; set; } = new List<Order>();
         public ICollection<Review> Reviews { get; set; } = new List<Review>();
+        public ICollection<CustomerTreatment> CustomerTreatments { get; set; } = new List<CustomerTreatment>();
+        public LoyaltyPoint? LoyaltyPoint { get; set; }
     }
 
     public class Service
@@ -59,7 +63,7 @@ namespace NguyenThiCamTu_2123110472.Models
         [Range(0, double.MaxValue, ErrorMessage = "Giá dịch vụ không được nhỏ hơn 0.")]
         public decimal Price { get; set; }
 
-        [Range(0, int.MaxValue, ErrorMessage = "Thời gian không được nhỏ hơn 0.")]
+        [Range(1, int.MaxValue, ErrorMessage = "Thời gian phải lớn hơn 0.")]
         public int DurationMinutes { get; set; }
 
         public int? CategoryId { get; set; }
@@ -68,6 +72,7 @@ namespace NguyenThiCamTu_2123110472.Models
 
         public ICollection<AppointmentDetail> AppointmentDetails { get; set; } = new List<AppointmentDetail>();
         public ICollection<Review> Reviews { get; set; } = new List<Review>();
+        public ICollection<ServiceImage> ServiceImages { get; set; } = new List<ServiceImage>();
     }
 
     public class Product
@@ -108,7 +113,13 @@ namespace NguyenThiCamTu_2123110472.Models
         [MaxLength(100)]
         public string Position { get; set; } = string.Empty; // e.g. Masseur, Hair Stylist
 
+        [MaxLength(100)]
+        [EmailAddress(ErrorMessage = "Địa chỉ Email không hợp lệ.")]
+        public string Email { get; set; } = string.Empty;
+
         public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+        public ICollection<WorkSchedule> WorkSchedules { get; set; } = new List<WorkSchedule>();
+        public ICollection<TreatmentSession> TreatmentSessions { get; set; } = new List<TreatmentSession>();
     }
 
     public class Appointment
@@ -130,6 +141,10 @@ namespace NguyenThiCamTu_2123110472.Models
         [ForeignKey("StaffId")]
         public Staff? Staff { get; set; }
 
+        public int? BedId { get; set; }
+        [ForeignKey("BedId")]
+        public Bed? Bed { get; set; }
+
         public ICollection<AppointmentDetail> AppointmentDetails { get; set; } = new List<AppointmentDetail>();
     }
 
@@ -146,8 +161,10 @@ namespace NguyenThiCamTu_2123110472.Models
         [ForeignKey("ServiceId")]
         public Service? Service { get; set; }
 
+        public int Quantity { get; set; } = 1;
+
         [Column(TypeName = "decimal(18,2)")]
-        public decimal PriceAtTime { get; set; }
+        public decimal Price { get; set; }
     }
 
     public class Order
@@ -174,6 +191,7 @@ namespace NguyenThiCamTu_2123110472.Models
         public Promotion? Promotion { get; set; }
 
         public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
+        public ICollection<Payment> Payments { get; set; } = new List<Payment>();
     }
 
     public class OrderDetail
@@ -194,13 +212,10 @@ namespace NguyenThiCamTu_2123110472.Models
         [ForeignKey("ProductId")]
         public Product? Product { get; set; }
 
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal UnitPrice { get; set; }
-
         public int Quantity { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
-        public decimal SubTotal { get; set; }
+        public decimal Price { get; set; }
     }
 
     public class ServiceCategory
@@ -253,5 +268,208 @@ namespace NguyenThiCamTu_2123110472.Models
         public string Comment { get; set; } = string.Empty;
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    }
+
+    public class Payment
+    {
+        [Key]
+        public int Id { get; set; }
+        
+        public int OrderId { get; set; }
+        [ForeignKey("OrderId")]
+        public Order? Order { get; set; }
+
+        [Required]
+        [MaxLength(50)]
+        public string PaymentMethod { get; set; } = string.Empty;
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal Amount { get; set; }
+
+        public DateTime PaymentDate { get; set; } = DateTime.UtcNow;
+
+        [Required]
+        [MaxLength(20)]
+        public string Status { get; set; } = "Pending";
+    }
+
+    public class WorkSchedule
+    {
+        [Key]
+        public int Id { get; set; }
+
+        public int StaffId { get; set; }
+        [ForeignKey("StaffId")]
+        public Staff? Staff { get; set; }
+
+        public DateTime WorkDate { get; set; }
+
+        public TimeSpan StartTime { get; set; }
+
+        public TimeSpan EndTime { get; set; }
+    }
+
+    public class ServiceImage
+    {
+        [Key]
+        public int Id { get; set; }
+
+        public int ServiceId { get; set; }
+        [ForeignKey("ServiceId")]
+        public Service? Service { get; set; }
+
+        [Required]
+        public string ImageUrl { get; set; } = string.Empty;
+    }
+
+    public class LoyaltyPoint
+    {
+        [Key]
+        public int Id { get; set; }
+
+        public int CustomerId { get; set; }
+        [ForeignKey("CustomerId")]
+        public Customer? Customer { get; set; }
+
+        public int Points { get; set; }
+
+        public DateTime UpdatedDate { get; set; } = DateTime.UtcNow;
+    }
+
+    public class Notification
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        [MaxLength(200)]
+        public string Title { get; set; } = string.Empty;
+
+        public string Message { get; set; } = string.Empty;
+
+        public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+
+        public bool IsRead { get; set; } = false;
+
+        public int UserId { get; set; }
+        [ForeignKey("UserId")]
+        public User? User { get; set; }
+    }
+ 
+    public class Treatment
+    {
+        [Key]
+        public int Id { get; set; }
+ 
+        [Required]
+        [MaxLength(200)]
+        public string Name { get; set; } = string.Empty;
+ 
+        public string Description { get; set; } = string.Empty;
+ 
+        public int TotalSessions { get; set; }
+ 
+        [Range(0, double.MaxValue, ErrorMessage = "Giá không được nhỏ hơn 0.")]
+        public decimal Price { get; set; }
+ 
+        [Range(1, int.MaxValue, ErrorMessage = "Thời gian phải lớn hơn 0.")]
+        public int DurationPerSession { get; set; } // minutes
+ 
+        public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+ 
+        public ICollection<CustomerTreatment> CustomerTreatments { get; set; } = new List<CustomerTreatment>();
+    }
+ 
+    public class CustomerTreatment
+    {
+        [Key]
+        public int Id { get; set; }
+ 
+        public int CustomerId { get; set; }
+        [ForeignKey("CustomerId")]
+        public Customer? Customer { get; set; }
+ 
+        public int TreatmentId { get; set; }
+        [ForeignKey("TreatmentId")]
+        public Treatment? Treatment { get; set; }
+ 
+        public DateTime StartDate { get; set; } = DateTime.UtcNow;
+        
+        public DateTime? EndDate { get; set; }
+ 
+        public int RemainingSessions { get; set; }
+ 
+        [Required]
+        [MaxLength(20)]
+        public string Status { get; set; } = "Active"; // Active, Completed, Cancelled
+ 
+        public string? Note { get; set; }
+ 
+        public ICollection<TreatmentSession> TreatmentSessions { get; set; } = new List<TreatmentSession>();
+    }
+ 
+    public class TreatmentSession
+    {
+        [Key]
+        public int Id { get; set; }
+ 
+        public int CustomerTreatmentId { get; set; }
+        [ForeignKey("CustomerTreatmentId")]
+        public CustomerTreatment? CustomerTreatment { get; set; }
+ 
+        public int SessionNumber { get; set; }
+ 
+        public DateTime SessionDate { get; set; } = DateTime.UtcNow;
+ 
+        public int StaffId { get; set; }
+        [ForeignKey("StaffId")]
+        public Staff? Staff { get; set; }
+ 
+        public string? Note { get; set; }
+ 
+        [Required]
+        [MaxLength(20)]
+        public string Status { get; set; } = "Done"; // Pending, Done, Cancelled
+    }
+
+    public class RoomType
+    {
+        [Key]
+        public int Id { get; set; }
+        [Required, MaxLength(100)]
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public decimal PriceMultiplier { get; set; } = 1.0m;
+        public ICollection<Room> Rooms { get; set; } = new List<Room>();
+    }
+
+    public class Room
+    {
+        [Key]
+        public int Id { get; set; }
+        [Required, MaxLength(100)]
+        public string RoomName { get; set; } = string.Empty;
+        public int RoomTypeId { get; set; }
+        [ForeignKey("RoomTypeId")]
+        public RoomType? RoomType { get; set; }
+        [MaxLength(20)]
+        public string Status { get; set; } = "Available"; // Available, Occupied, Maintenance
+        public string Note { get; set; } = string.Empty;
+        public ICollection<Bed> Beds { get; set; } = new List<Bed>();
+    }
+
+    public class Bed
+    {
+        [Key]
+        public int Id { get; set; }
+        [Required, MaxLength(100)]
+        public string BedName { get; set; } = string.Empty;
+        public int RoomId { get; set; }
+        [ForeignKey("RoomId")]
+        public Room? Room { get; set; }
+        [MaxLength(20)]
+        public string Status { get; set; } = "Available"; // Available, InUse, Maintenance
+        public string Note { get; set; } = string.Empty;
+        public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
     }
 }
