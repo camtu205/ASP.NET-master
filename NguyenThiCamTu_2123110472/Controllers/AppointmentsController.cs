@@ -29,7 +29,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
                     .ThenInclude(ad => ad.Service)
                 .ToListAsync();
         }
-
+        //aaaaaa
         // GET: api/Appointments/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Appointment>> GetAppointment(int id)
