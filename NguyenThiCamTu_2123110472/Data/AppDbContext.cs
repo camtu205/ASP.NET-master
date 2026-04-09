@@ -89,13 +89,6 @@ namespace NguyenThiCamTu_2123110472.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
-
-            // Ép tất cả tên bảng về chữ thường để tương thích với PostgreSQL
-            foreach (var entity in modelBuilder.Model.GetEntityTypes())
-            {
-                entity.SetTableName(entity.GetTableName()?.ToLower());
-            }
-
             
             modelBuilder.Entity<AppointmentDetail>()
                 .HasOne(ad => ad.Appointment)
