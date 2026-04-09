@@ -122,4 +122,21 @@ app.MapControllers();
 // Handle SPA routing
 app.MapFallbackToFile("index.html");
 
+// --- ĐOẠN NÀY THỰC THI MIGRATION VÀO DATABASE ---
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        context.Database.Migrate();
+        app.Logger.LogInformation(">>> DATABASE MIGRATION SUCCESSFUL! <<<");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, ">>> DATABASE MIGRATION FAILED! <<<");
+    }
+}
+// -----------------------------------------------
+
 app.Run();
