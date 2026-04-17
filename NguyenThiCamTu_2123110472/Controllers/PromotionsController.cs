@@ -21,7 +21,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Promotion>>> GetPromotions()
         {
-            return await _context.Promotions.ToListAsync();
+            return await _context.Promotions.Include(p => p.Orders).ToListAsync();
         }
 
         [HttpGet("{id}")]

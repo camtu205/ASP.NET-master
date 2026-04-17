@@ -244,9 +244,23 @@ async function openCRUDModal(type, id = null) {
             <div class="input-group"><label>Tồn kho</label><input type="number" name="stock" value="${data.stockQuantity}"></div>
         `;
     } else if (type === 'promotion') {
+        const services = await apiCall('/Services');
+        const currentAppIds = data.applicableServiceIds ? data.applicableServiceIds.split(',').filter(x => x) : [];
         html += `
-            <div class="input-group"><label>Tên CTKM</label><input type="text" name="name" value="${data.name}"></div>
-            <div class="input-group"><label>Giảm (%)</label><input type="number" name="pct" value="${data.discountPercent}"></div>
+            <div class="input-group"><label>Tên CTKM</label><input type="text" name="name" value="${data.name || ''}" required></div>
+            <div class="input-group"><label>Giảm (%)</label><input type="number" name="pct" value="${data.discountPercent || 0}" required></div>
+            <div class="input-group"><label>Số lần dùng tối đa</label><input type="number" name="maxUsage" value="${data.maxUsage || ''}" placeholder="Để trống nếu không giới hạn"></div>
+            <div class="input-group"><label>Dịch vụ áp dụng</label>
+                <select name="applicableServices" multiple style="height:120px">
+                    <option value="ALL" ${!data.applicableServiceIds || data.applicableServiceIds === 'ALL' ? 'selected' : ''}>Tất cả dịch vụ</option>
+                    ${services.map(s => `<option value="${s.id}" ${currentAppIds.includes(s.id.toString()) ? 'selected' : ''}>${s.name}</option>`).join('')}
+                </select>
+                <small style="color:#666; font-size:0.75rem">Giữ phím Ctrl để chọn nhiều dịch vụ</small>
+            </div>
+            <div class="form-row">
+                <div class="input-group"><label>Ngày bắt đầu</label><input type="date" name="startDate" value="${new Date(data.startDate || Date.now()).toISOString().split('T')[0]}" required></div>
+                <div class="input-group"><label>Ngày kết thúc</label><input type="date" name="endDate" value="${new Date(data.endDate || (Date.now() + 7*24*3600*1000)).toISOString().split('T')[0]}" required></div>
+            </div>
         `;
     } else if (type === 'treatment') {
         html += `
@@ -294,7 +308,18 @@ async function openCRUDModal(type, id = null) {
         if (type === 'staff') body = {...body, fullName: fd.get('fullName'), phoneNumber: fd.get('phoneNumber'), position: fd.get('position'), email: fd.get('email')};
         if (type === 'service') body = {...body, name: fd.get('name'), price: parseFloat(fd.get('price')), durationMinutes: parseInt(fd.get('duration'))};
         if (type === 'product') body = {...body, name: fd.get('name'), price: parseFloat(fd.get('price')), stockQuantity: parseInt(fd.get('stock'))};
-        if (type === 'promotion') body = {...body, name: fd.get('name'), discountPercent: parseFloat(fd.get('pct')), startDate: data.startDate || new Date(), endDate: data.endDate || new Date(Date.now() + 7*24*3600*1000)};
+        if (type === 'promotion') {
+            const appServices = Array.from(e.target.applicableServices.selectedOptions).map(o => o.value);
+            const appIds = appServices.includes('ALL') ? 'ALL' : (',' + appServices.join(',') + ',');
+            body = {...body, 
+                name: fd.get('name'), 
+                discountPercent: parseFloat(fd.get('pct')), 
+                maxUsage: fd.get('maxUsage') ? parseInt(fd.get('maxUsage')) : null,
+                applicableServiceIds: appIds,
+                startDate: fd.get('startDate'), 
+                endDate: fd.get('endDate')
+            };
+        }
         if (type === 'treatment') body = {...body, name: fd.get('name'), totalSessions: parseInt(fd.get('totalSessions')), price: parseFloat(fd.get('price')), durationPerSession: parseInt(fd.get('duration'))};
         if (type === 'customerTreatment') body = {...body, customerId: parseInt(fd.get('customerId')), treatmentId: parseInt(fd.get('treatmentId')), status: fd.get('status')};
         if (type === 'roomType') body = {...body, name: fd.get('name'), description: fd.get('desc'), priceMultiplier: parseFloat(fd.get('multiplier'))};
@@ -357,7 +382,14 @@ const renderers = {
     
     products: () => renderers.commonList('product', 'Sản phẩm', '/Product', ['ID', 'Tên sản phẩm', 'Giá', 'Tồn kho'], i => `<td>#${i.id}</td><td><strong>${i.name}</strong></td><td>${i.price.toLocaleString()}đ</td><td>${i.stockQuantity}</td>`),
     
-    promotions: () => renderers.commonList('promotion', 'Khuyến mãi', '/Promotions', ['ID', 'Tên CTKM', 'Giảm %', 'Hạn dùng'], i => `<td>#${i.id}</td><td><strong>${i.name}</strong></td><td>${i.discountPercent}%</td><td>${new Date(i.endDate).toLocaleDateString()}</td>`),
+    promotions: () => renderers.commonList('promotion', 'Khuyến mãi', '/Promotions', ['ID', 'Tên CTKM', 'Giảm %', 'Áp dụng', 'Lượt dùng', 'Thời hạn'], i => `
+        <td>#${i.id}</td>
+        <td><strong>${i.name}</strong></td>
+        <td>${i.discountPercent}%</td>
+        <td><span class="badge badge-pending" style="font-size:10px">${i.applicableServiceIds === 'ALL' || !i.applicableServiceIds ? 'Tất cả dịch vụ' : 'Một số DV'}</span></td>
+        <td>${i.maxUsage ? `${i.orders?.length || 0}/${i.maxUsage}` : '∞'}</td>
+        <td style="font-size:11px">${new Date(i.startDate).toLocaleDateString()} - ${new Date(i.endDate).toLocaleDateString()}</td>
+    `),
 
     treatments: () => renderers.commonList('treatment', 'Liệu trình', '/Treatments', ['ID', 'Tên liệu trình', 'Số buổi', 'Giá'], i => `<td>#${i.id}</td><td><strong>${i.name}</strong></td><td>${i.totalSessions} buổi</td><td>${i.price.toLocaleString()}đ</td>`),
 

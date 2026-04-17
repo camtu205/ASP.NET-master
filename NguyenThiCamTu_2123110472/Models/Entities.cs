@@ -246,6 +246,10 @@ namespace NguyenThiCamTu_2123110472.Models
         public DateTime StartDate { get; set; }
         
         public DateTime EndDate { get; set; }
+        
+        public int? MaxUsage { get; set; } // Sửa theo yêu cầu: Giới hạn số lần sử dụng
+        
+        public string? ApplicableServiceIds { get; set; } // Sửa theo yêu cầu: Các dịch vụ được áp dụng (e.g. "ALL" hoặc ",1,2,3,")
 
         public ICollection<Order> Orders { get; set; } = new List<Order>();
     }

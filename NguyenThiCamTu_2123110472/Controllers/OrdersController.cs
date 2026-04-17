@@ -108,11 +108,39 @@ namespace NguyenThiCamTu_2123110472.Controllers
             // Apply Promotion
             if (request.PromotionId.HasValue)
             {
-                var promo = await _context.Promotions.FindAsync(request.PromotionId.Value);
+                var promo = await _context.Promotions
+                    .Include(p => p.Orders)
+                    .FirstOrDefaultAsync(p => p.Id == request.PromotionId.Value);
+
                 if (promo != null && promo.StartDate <= DateTime.Now && promo.EndDate >= DateTime.Now)
                 {
-                    decimal discount = total * (promo.DiscountPercent / 100);
-                    total -= discount;
+                    // 1. Kiểm tra số lần sử dụng
+                    if (promo.MaxUsage.HasValue && promo.Orders.Count >= promo.MaxUsage.Value)
+                    {
+                        return BadRequest("Khuyến mãi đã hết lượt sử dụng.");
+                    }
+
+                    // 2. Tính tiền được giảm dựa trên các dịch vụ áp dụng
+                    decimal discountableAmount = 0;
+                    var appIds = (promo.ApplicableServiceIds ?? "ALL").ToUpper();
+
+                    foreach (var od in order.OrderDetails)
+                    {
+                        if (od.ServiceId.HasValue)
+                        {
+                            bool isApplicable = appIds == "ALL" || appIds.Contains($",{od.ServiceId},");
+                            if (isApplicable)
+                            {
+                                discountableAmount += od.Price * od.Quantity;
+                            }
+                        }
+                    }
+
+                    if (discountableAmount > 0)
+                    {
+                        decimal discount = discountableAmount * (promo.DiscountPercent / 100);
+                        total -= discount;
+                    }
                 }
             }
 
