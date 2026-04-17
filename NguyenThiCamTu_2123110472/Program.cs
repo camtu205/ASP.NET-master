@@ -139,6 +139,13 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<AppDbContext>();
         context.Database.Migrate();
+        
+        // Tự động cập nhật Schema cho bảng Promotions nếu thiếu cột
+        try {
+            context.Database.ExecuteSqlRaw("ALTER TABLE \"Promotions\" ADD COLUMN IF NOT EXISTS \"MaxUsage\" INTEGER;");
+            context.Database.ExecuteSqlRaw("ALTER TABLE \"Promotions\" ADD COLUMN IF NOT EXISTS \"ApplicableServiceIds\" TEXT;");
+        } catch { /* Bỏ qua nếu đã có hoặc lỗi syntax (DB khác Postgres) */ }
+
         app.Logger.LogInformation(">>> DATABASE MIGRATION SUCCESSFUL! <<<");
     }
     catch (Exception ex)
