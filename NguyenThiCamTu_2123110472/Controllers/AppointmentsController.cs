@@ -139,6 +139,56 @@ namespace NguyenThiCamTu_2123110472.Controllers
             await _context.SaveChangesAsync();
             return CreatedAtAction("GetAppointment", new { id = appointment.Id }, appointment);
         }
+        [HttpPut("{id}")]
+        public async Task<IActionResult> PutAppointment(int id, [FromBody] BookingDto request)
+        {
+            var appointment = await _context.Appointments
+                .Include(a => a.AppointmentDetails)
+                .FirstOrDefaultAsync(a => a.Id == id);
+
+            if (appointment == null) return NotFound();
+
+            // 1. Kiểm tra điều kiện: không được sửa khi còn dưới 30 phút
+            if (appointment.AppointmentDate < DateTime.Now.AddMinutes(30))
+            {
+                return BadRequest("Không thể chỉnh sửa lịch hẹn khi còn dưới 30 phút tới giờ hẹn.");
+            }
+
+            // 2. Kiểm tra thời gian mới: cũng phải sau hiện tại ít nhất 30 phút
+            if (request.AppointmentDate < DateTime.Now.AddMinutes(30))
+            {
+                return BadRequest("Thời gian mới phải sau thời điểm hiện tại ít nhất 30 phút.");
+            }
+
+            // 3. Cập nhật thông tin cơ bản
+            appointment.AppointmentDate = request.AppointmentDate;
+            appointment.StaffId = request.StaffId;
+            appointment.BedId = request.BedId;
+            // Nếu đổi nhân viên thì cập nhật trạng thái
+            if (request.StaffId.HasValue) appointment.Status = "Assigned";
+
+            _context.Entry(appointment).State = EntityState.Modified;
+
+            // 4. Cập nhật Services (Xóa cũ thêm mới)
+            _context.AppointmentDetails.RemoveRange(appointment.AppointmentDetails);
+            foreach (var sId in request.ServiceIds)
+            {
+                var service = await _context.Services.FindAsync(sId);
+                if (service != null)
+                {
+                    _context.AppointmentDetails.Add(new AppointmentDetail
+                    {
+                        AppointmentId = appointment.Id,
+                        ServiceId = service.Id,
+                        Price = service.Price,
+                        Quantity = 1
+                    });
+                }
+            }
+
+            await _context.SaveChangesAsync();
+            return NoContent();
+        }
 
         [HttpPut("{id}/AssignStaff")]
         public async Task<IActionResult> AssignStaff(int id, [FromBody] int staffId)

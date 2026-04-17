@@ -18,6 +18,14 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 
+// Cấu hình Forwarded Headers để nhận diện đúng HTTPS/IP khi chạy sau Proxy (Render, Vercel)
+builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 builder.Services.AddControllers()
     .AddJsonOptions(options => {
         options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
@@ -101,11 +109,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
+
 // Enable Static Files and Default Files (index.html)
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.UseCors("AllowVercel");
 app.UseCors("AllowAll");
 
 // Configure the HTTP request pipeline.

@@ -4,11 +4,11 @@
  */
 
 // Cấu hình URL Backend: Thay đổi URL Render của bạn tại đây khi deploy
-const RENDER_EXTERNAL_URL = 'https://nguyenthicantu-2123110472.onrender.com'; 
+const RENDER_EXTERNAL_URL = 'https://asp-net-master.onrender.com'; 
 
 const API_BASE = (window.location.hostname.includes('vercel.app'))
     ? RENDER_EXTERNAL_URL + '/api'
-    : window.location.origin + '/api';
+    : '/api'; // Dùng đường dẫn tương đối khi cùng host (Render)
 
 // --- State Management ---
 const state = {
@@ -34,8 +34,14 @@ function parseJwt(token) {
     } catch (e) { return null; }
 }
 
+function toLocalISOString(date) {
+    const tzOffset = date.getTimezoneOffset() * 60000; // offset in milliseconds
+    const localISOTime = (new Date(date - tzOffset)).toISOString().slice(0, 16);
+    return localISOTime;
+}
+
 // --- API Helper ---
-async function apiCall(endpoint, method = 'GET', body = null) {
+async function apiCall(endpoint, method = 'GET', body = null, retries = 2) {
     const headers = { 'Content-Type': 'application/json' };
     if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
 
@@ -55,6 +61,13 @@ async function apiCall(endpoint, method = 'GET', body = null) {
         }
         return response.status !== 204 ? await response.json() : null;
     } catch (err) {
+        // Thử lại nếu lỗi mạng (ERR_NETWORK_CHANGED, Failed to fetch)
+        if (retries > 0 && (err.name === 'TypeError' || err.message.includes('fetch'))) {
+            console.warn(`Retrying... (${3 - retries})`, endpoint);
+            await new Promise(r => setTimeout(r, 1000)); // Chờ 1s rồi thử lại
+            return apiCall(endpoint, method, body, retries - 1);
+        }
+
         if (err.message !== 'Hết phiên làm việc.') showToast(err.message, 'error');
         throw err;
     }
@@ -388,28 +401,44 @@ const renderers = {
                 <form id="booking-form"><div class="form-row">
                     <div class="input-group"><label>Khách hàng</label><select id="book-customer" required><option value="">-- Chọn khách --</option>${customers.map(c => `<option value="${c.id}">${c.fullName}</option>`).join('')}</select></div>
                     <div class="input-group"><label>Dịch vụ</label><select id="book-service" required><option value="">-- Chọn dịch vụ --</option>${services.map(s => `<option value="${s.id}">${s.name}</option>`).join('')}</select></div>
-                    <div class="input-group"><label>Kỹ thuật viên</label><select id="book-staff"><option value="">-- Tự động gán sau --</option>${staffs.map(s => `<option value="${s.id}">${s.fullName}</option>`).join('')}</select></div>
+                    <div class="input-group"><label>Kỹ thuật viên</label><select id="book-staff"><option value="">-- Tự động gán sau --</option>${staffs.filter(s => s.position === 'Kỹ thuật viên').map(s => `<option value="${s.id}">${s.fullName}</option>`).join('')}</select></div>
                     <div class="input-group"><label>Giường/Phòng</label><select id="book-bed"><option value="">-- Chọn sau --</option>${beds.filter(b => b.status === 'Available').map(b => `<option value="${b.id}">${b.bedName} (${b.room?.roomName} - ${b.room?.roomType?.name})</option>`).join('')}</select></div>
                 </div><div class="form-row">
-                    <div class="input-group"><label>Ngày giờ</label><input type="datetime-local" id="book-date" required value="${new Date(Date.now() + 35*60000).toISOString().slice(0, 16)}"></div>
+                    <div class="input-group"><label>Ngày giờ</label><input type="datetime-local" id="book-date" required value="${toLocalISOString(new Date(Date.now() + 35*60000))}"></div>
                     <div class="input-group" style="align-self:flex-end"><button type="submit" class="btn-primary">Xác nhận</button></div>
                 </div></form></div>
             <table><thead><tr><th>Khách hàng</th><th>Ngày hẹn</th><th>Vị trí</th><th>NV thực hiện</th><th>Trạng thái</th><th>Dịch vụ</th><th style="text-align:right">Thao tác</th></tr></thead>
-            <tbody>${apps.map(a => `<tr><td><strong>${a.customer?.fullName || 'N/A'}</strong></td><td>${new Date(a.appointmentDate).toLocaleString()}</td><td>${a.bed ? `${a.bed.bedName} (${a.bed.room?.roomName})` : '<em style="color:#94a3b8">Chưa gán</em>'}</td><td>${a.staff?.fullName || '<em style="color:#94a3b8">Chưa gán</em>'}</td><td><span class="badge badge-${a.status.toLowerCase()}">${a.status}</span></td><td>${a.appointmentDetails?.map(d => d.service?.name).join(', ') || ''}</td>
-            <td style="text-align:right">${a.status === 'Pending' ? `<button onclick="assignStaff(${a.id})" class="btn-edit" style="background:#10B981">Gán NV</button>` : ''} ${a.status === 'Assigned' ? `<button onclick="completeAppointment(${a.id})" class="btn-edit" style="background:#3B82F6">Xong</button>` : ''}
-            <button class="btn-danger" onclick="deleteItem('/Appointments', ${a.id}, 'Lịch #${a.id}')">Hủy</button></td></tr>`).join('')}</tbody></table>
+            <tbody>${apps.map(a => {
+                const appDate = new Date(a.appointmentDate);
+                const now = new Date();
+                const canEdit = (appDate - now) > 30 * 60000;
+                return `<tr><td><strong>${a.customer?.fullName || 'N/A'}</strong></td><td>${appDate.toLocaleString()}</td><td>${a.bed ? `${a.bed.bedName} (${a.bed.room?.roomName})` : '<em style="color:#94a3b8">Chưa gán</em>'}</td><td>${a.staff?.fullName || '<em style="color:#94a3b8">Chưa gán</em>'}</td><td><span class="badge badge-${a.status.toLowerCase()}">${a.status}</span></td><td>${a.appointmentDetails?.map(d => d.service?.name).join(', ') || ''}</td>
+                <td style="text-align:right">
+                    ${canEdit ? `<button onclick="editAppointment(${a.id})" class="btn-edit" title="Chỉnh sửa chi tiết"><i class="fas fa-edit"></i> Sửa chi tiết</button>` : `<button class="btn-edit" style="background:#ccc; cursor:not-allowed" title="Quá hạn chỉnh sửa" onclick="showToast('Chỉ có thể sửa trước giờ hẹn 30 phút','error')"><i class="fas fa-edit"></i> Sửa chi tiết</button>`}
+                    ${a.status === 'Pending' ? `<button onclick="assignStaff(${a.id})" class="btn-edit" style="background:#10B981" title="Gán NV">Gán NV</button>` : ''} 
+                    ${a.status === 'Assigned' ? `<button onclick="completeAppointment(${a.id})" class="btn-edit" style="background:#3B82F6" title="Xong">Xong</button>` : ''}
+                    <button class="btn-danger" onclick="deleteItem('/Appointments', ${a.id}, 'Lịch #${a.id}')" title="Hủy"><i class="fas fa-trash"></i></button>
+                </td></tr>`;
+            }).join('')}</tbody></table>
         `;
         document.getElementById('booking-form').onsubmit = async (e) => {
             e.preventDefault();
             const customerId = parseInt(document.getElementById('book-customer').value);
             const serviceIds = [parseInt(document.getElementById('book-service').value)];
-            const appointmentDate = document.getElementById('book-date').value;
+            const appointmentDateStr = document.getElementById('book-date').value;
             const staffId = document.getElementById('book-staff').value ? parseInt(document.getElementById('book-staff').value) : null;
             const bedId = document.getElementById('book-bed').value ? parseInt(document.getElementById('book-bed').value) : null;
 
+            // Validator Frontend
+            const appDate = new Date(appointmentDateStr);
+            const now = new Date();
+            if (appDate < new Date(now.getTime() + 29 * 60000)) {
+                return showToast('Thời gian đặt lịch phải sau hiện tại ít nhất 30 phút.', 'error');
+            }
+
             const sendBooking = async (ignoreConflicts = false) => {
                 try {
-                    await apiCall('/Appointments/Book', 'POST', { customerId, appointmentDate, serviceIds, staffId, bedId, ignoreConflicts });
+                    await apiCall('/Appointments/Book', 'POST', { customerId, appointmentDate: appointmentDateStr, serviceIds, staffId, bedId, ignoreConflicts });
                     showToast('Đã đặt lịch thành công!');
                     renderers.appointments();
                 } catch (err) {
@@ -512,7 +541,7 @@ window.assignStaff = async (id) => {
             <label>Chọn kỹ thuật viên</label>
             <select name="staffId" required>
                 <option value="">-- Chọn nhân viên --</option>
-                ${staffs.map(s => `<option value="${s.id}">${s.fullName} - ${s.position}</option>`).join('')}
+                ${staffs.filter(s => s.position === 'Kỹ thuật viên').map(s => `<option value="${s.id}">${s.fullName} - ${s.position}</option>`).join('')}
             </select>
         </div>
         <p style="font-size: 0.8rem; color: #64748b; margin-top: 10px;">Lưu ý: Hệ thống sẽ kiểm tra trùng lịch khi bạn xác nhận.</p>
@@ -533,6 +562,71 @@ window.assignStaff = async (id) => {
 };
 
 window.completeAppointment = async (id) => { await apiCall(`/Appointments/${id}/Complete`, 'PUT'); renderers.appointments(); };
+
+window.editAppointment = async (id) => {
+    const [app, customers, services, staffs, beds] = await Promise.all([
+        apiCall(`/Appointments/${id}`),
+        apiCall('/Customers'),
+        apiCall('/Services'),
+        apiCall('/Staffs'),
+        apiCall('/Beds')
+    ]);
+
+    const modal = document.getElementById('edit-modal');
+    const fields = document.getElementById('modal-fields');
+    const title = document.getElementById('modal-title');
+    const form = document.getElementById('edit-form');
+
+    title.textContent = "Chỉnh sửa chi tiết lịch hẹn";
+    modal.classList.remove('hidden');
+
+    const currentServiceIds = app.appointmentDetails.map(d => d.serviceId);
+
+    fields.innerHTML = `
+        <div class="input-group"><label>Khách hàng</label>
+            <select name="customerId" disabled>${customers.map(c => `<option value="${c.id}" ${c.id === app.customerId ? 'selected' : ''}>${c.fullName}</option>`).join('')}</select>
+        </div>
+        <div class="input-group"><label>Dịch vụ (Chọn nhiều)</label>
+            <select name="serviceIds" multiple style="height:100px" required>
+                ${services.map(s => `<option value="${s.id}" ${currentServiceIds.includes(s.id) ? 'selected' : ''}>${s.name}</option>`).join('')}
+            </select>
+        </div>
+        <div class="input-group"><label>Ngày giờ</label>
+            <input type="datetime-local" name="appointmentDate" value="${toLocalISOString(new Date(app.appointmentDate))}" required>
+        </div>
+        <div class="input-group"><label>Kỹ thuật viên</label>
+            <select name="staffId">
+                <option value="">-- Tự động gán --</option>
+                ${staffs.filter(s => s.position === 'Kỹ thuật viên').map(s => `<option value="${s.id}" ${s.id === app.staffId ? 'selected' : ''}>${s.fullName}</option>`).join('')}
+            </select>
+        </div>
+        <div class="input-group"><label>Giường/Phòng</label>
+            <select name="bedId">
+                <option value="">-- Chọn sau --</option>
+                ${beds.filter(b => b.status === 'Available' || b.id === app.bedId).map(b => `<option value="${b.id}" ${b.id === app.bedId ? 'selected' : ''}>${b.bedName} (${b.room?.roomName} - ${b.room?.roomType?.name})</option>`).join('')}
+            </select>
+        </div>
+    `;
+
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const body = {
+            customerId: app.customerId,
+            appointmentDate: fd.get('appointmentDate'),
+            serviceIds: Array.from(fd.getAll('serviceIds')).map(id => parseInt(id)),
+            staffId: fd.get('staffId') ? parseInt(fd.get('staffId')) : null,
+            bedId: fd.get('bedId') ? parseInt(fd.get('bedId')) : null
+        };
+
+        try {
+            await apiCall(`/Appointments/${id}`, 'PUT', body);
+            modal.classList.add('hidden');
+            showToast('Cập nhật lịch hẹn thành công!');
+            renderers.appointments();
+        } catch (err) {}
+    };
+};
 
 // --- Init ---
 async function initApp() {
