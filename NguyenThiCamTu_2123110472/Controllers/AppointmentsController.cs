@@ -18,6 +18,31 @@ namespace NguyenThiCamTu_2123110472.Controllers
             _context = context;
         }
 
+        private async Task<DateTime> CalculateEndTime(DateTime start, IEnumerable<int> serviceIds)
+        {
+            int totalDuration = 0;
+            foreach (var sId in serviceIds)
+            {
+                var service = await _context.Services.FindAsync(sId);
+                if (service != null) totalDuration += service.Duration;
+            }
+            return start.AddMinutes(totalDuration + 10);
+        }
+
+        private async Task<DateTime> GetAppointmentEndTime(Appointment app)
+        {
+            int totalDuration = 0;
+            var details = app.AppointmentDetails;
+            if (details == null) details = await _context.AppointmentDetails.Where(d => d.AppointmentId == app.Id).ToListAsync();
+            
+            foreach (var detail in details)
+            {
+                var service = await _context.Services.FindAsync(detail.ServiceId);
+                if (service != null) totalDuration += service.Duration;
+            }
+            return app.AppointmentDate.AddMinutes(totalDuration + 10);
+        }
+
         // GET: api/Appointments
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Appointment>>> GetAppointments()
@@ -25,11 +50,53 @@ namespace NguyenThiCamTu_2123110472.Controllers
             return await _context.Appointments
                 .Include(a => a.Customer)
                 .Include(a => a.Staff)
-                .Include(a => a.AppointmentDetails)
-                    .ThenInclude(ad => ad.Service)
+                .Include(a => a.Bed).ThenInclude(b => b.Room).ThenInclude(r => r.RoomType)
+                .Include(a => a.AppointmentDetails).ThenInclude(ad => ad.Service)
+                .OrderByDescending(a => a.AppointmentDate)
                 .ToListAsync();
         }
-        //aaaaaa
+
+        [HttpGet("{id}/AvailableBeds")]
+        public async Task<ActionResult<IEnumerable<Bed>>> GetAvailableBeds(int id)
+        {
+            var app = await _context.Appointments
+                .Include(a => a.AppointmentDetails)
+                .FirstOrDefaultAsync(a => a.Id == id);
+            if (app == null) return NotFound();
+
+            var newStart = app.AppointmentDate;
+            var newEnd = await GetAppointmentEndTime(app);
+
+            var allBeds = await _context.Beds.Include(b => b.Room).ToListAsync();
+            var appointments = await _context.Appointments
+                .Include(a => a.AppointmentDetails)
+                .Where(a => a.Id != id && a.BedId != null && a.Status != "Deleted")
+                .ToListAsync();
+
+            var availableBeds = new List<Bed>();
+
+            foreach (var bed in allBeds)
+            {
+                bool isOccupied = false;
+                var bedApps = appointments.Where(a => a.BedId == bed.Id);
+                foreach (var exApp in bedApps)
+                {
+                    var exStart = exApp.AppointmentDate;
+                    var exEnd = await GetAppointmentEndTime(exApp);
+
+                    // Overlap check
+                    if (newStart < exEnd && newEnd > exStart)
+                    {
+                        isOccupied = true;
+                        break;
+                    }
+                }
+                if (!isOccupied) availableBeds.Add(bed);
+            }
+
+            return availableBeds;
+        }
+
         // GET: api/Appointments/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Appointment>> GetAppointment(int id)
@@ -97,6 +164,24 @@ namespace NguyenThiCamTu_2123110472.Controllers
             }
  
             // Create Appointment
+            // 3. Kiểm tra trùng giường
+            if (request.BedId.HasValue)
+            {
+                var newEnd = await CalculateEndTime(request.AppointmentDate, request.ServiceIds);
+                var conflicts = await _context.Appointments
+                    .Include(a => a.AppointmentDetails)
+                    .Where(a => a.BedId == request.BedId && a.Status != "Cancelled" && a.Status != "Deleted")
+                    .ToListAsync();
+                foreach (var ex in conflicts)
+                {
+                    var exEnd = await GetAppointmentEndTime(ex);
+                    if (request.AppointmentDate < exEnd && newEnd > ex.AppointmentDate)
+                    {
+                        return BadRequest($"Giường này đã bận từ {ex.AppointmentDate:HH:mm} đến {exEnd:HH:mm}.");
+                    }
+                }
+            }
+
             var appointment = new Appointment
             {
                 CustomerId = request.CustomerId,
@@ -160,11 +245,28 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 return BadRequest("Thời gian mới phải sau thời điểm hiện tại ít nhất 30 phút.");
             }
 
-            // 3. Cập nhật thông tin cơ bản
+            // 3. Kiểm tra trùng giường
+            if (request.BedId.HasValue)
+            {
+                var newEnd = await CalculateEndTime(request.AppointmentDate, request.ServiceIds);
+                var conflicts = await _context.Appointments
+                    .Include(a => a.AppointmentDetails)
+                    .Where(a => a.BedId == request.BedId && a.Id != id && a.Status != "Cancelled" && a.Status != "Deleted")
+                    .ToListAsync();
+                foreach (var ex in conflicts)
+                {
+                    var exEnd = await GetAppointmentEndTime(ex);
+                    if (request.AppointmentDate < exEnd && newEnd > ex.AppointmentDate)
+                    {
+                        return BadRequest($"Giường này đã có người đặt trong khoảng {ex.AppointmentDate:HH:mm} - {exEnd:HH:mm}.");
+                    }
+                }
+            }
+
+            // 4. Cập nhật thông tin cơ bản
             appointment.AppointmentDate = request.AppointmentDate;
             appointment.StaffId = request.StaffId;
             appointment.BedId = request.BedId;
-            // Nếu đổi nhân viên thì cập nhật trạng thái
             if (request.StaffId.HasValue) appointment.Status = "Assigned";
 
             _context.Entry(appointment).State = EntityState.Modified;
@@ -190,40 +292,50 @@ namespace NguyenThiCamTu_2123110472.Controllers
             return NoContent();
         }
 
-        [HttpPut("{id}/AssignStaff")]
-        public async Task<IActionResult> AssignStaff(int id, [FromBody] int staffId)
+        public class AssignRequest { public int StaffId { get; set; } public int? BedId { get; set; } }
+
+        [HttpPut("{id}/Assign")]
+        public async Task<IActionResult> Assign(int id, [FromBody] AssignRequest request)
         {
-            var appointment = await _context.Appointments.FindAsync(id);
+            var appointment = await _context.Appointments
+                .Include(a => a.AppointmentDetails)
+                .FirstOrDefaultAsync(a => a.Id == id);
             if (appointment == null) return NotFound();
 
-            var staff = await _context.Staffs.FindAsync(staffId);
+            var staff = await _context.Staffs.FindAsync(request.StaffId);
             if (staff == null) return BadRequest("Staff not found.");
 
-            // Kiểm tra trùng lịch: Nhân viên bận nếu có lịch khác trong khoảng +/- 1 tiếng
-            var isBusy = await _context.Appointments
-                .AnyAsync(a => a.StaffId == staffId && 
-                               a.Status != "Cancelled" &&
-                               a.Id != id &&
-                               a.AppointmentDate >= appointment.AppointmentDate.AddHours(-1) &&
-                               a.AppointmentDate <= appointment.AppointmentDate.AddHours(1));
-
-            if (isBusy)
+            if (request.BedId.HasValue)
             {
-                return BadRequest($"Nhân viên {staff.FullName} đã có lịch hẹn khác trong khung giờ này. Vui lòng chọn nhân viên khác hoặc đổi giờ.");
+                var newStart = appointment.AppointmentDate;
+                var newEnd = await GetAppointmentEndTime(appointment);
+
+                var conflicts = await _context.Appointments
+                    .Include(a => a.AppointmentDetails)
+                    .Where(a => a.BedId == request.BedId && a.Id != id && a.Status != "Cancelled" && a.Status != "Deleted")
+                    .ToListAsync();
+
+                foreach (var ex in conflicts)
+                {
+                    var exEnd = await GetAppointmentEndTime(ex);
+                    if (newStart < exEnd && newEnd > ex.AppointmentDate)
+                    {
+                        return BadRequest($"Giường này đã có người đặt trong khoảng {ex.AppointmentDate:HH:mm} - {exEnd:HH:mm}.");
+                    }
+                }
             }
 
-            appointment.StaffId = staffId;
+            appointment.StaffId = request.StaffId;
+            appointment.BedId = request.BedId;
             appointment.Status = "Assigned";
             
             _context.Entry(appointment).State = EntityState.Modified;
 
-            // Thông báo thay đổi trạng thái: Đã phân công
             _context.Notifications.Add(new Notification
             {
                 Title = "Lịch hẹn được phân công",
-                Message = $"Lịch hẹn #{id} đã được phân công cho nhân viên {staff.FullName}.",
+                Message = $"Lịch hẹn #{id} đã được phân công.",
                 CreatedDate = DateTime.UtcNow,
-                IsRead = false,
                 UserId = 1 
             });
 

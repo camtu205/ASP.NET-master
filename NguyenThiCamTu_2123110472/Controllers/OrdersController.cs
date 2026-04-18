@@ -44,7 +44,10 @@ namespace NguyenThiCamTu_2123110472.Controllers
 
         public class CheckoutRequest
         {
-            public int AppointmentId { get; set; }
+            public int? AppointmentId { get; set; }
+            public int? CustomerId { get; set; }
+            public int? RoomTypeId { get; set; }
+            public List<int> ServiceIds { get; set; } = new List<int>();
             public List<int> ProductIds { get; set; } = new List<int>();
             public int? PromotionId { get; set; }
             public string PaymentMethod { get; set; } = "Tiền mặt";
@@ -60,15 +63,16 @@ namespace NguyenThiCamTu_2123110472.Controllers
                         .ThenInclude(r => r.RoomType)
                 .FirstOrDefaultAsync(a => a.Id == request.AppointmentId);
 
-            if (appointment == null || appointment.Status != "Done")
-            {
-                return BadRequest("Appointment not found or not completed.");
-            }
+            // Get Customer ID
+            int customerId = 0;
+            if (appointment != null) customerId = appointment.CustomerId;
+            else if (request.CustomerId.HasValue) customerId = request.CustomerId.Value;
+            else return BadRequest("Customer ID is required.");
 
             var order = new Order
             {
-                CustomerId = appointment.CustomerId,
-                AppointmentId = appointment.Id,
+                CustomerId = customerId,
+                AppointmentId = appointment?.Id,
                 PromotionId = request.PromotionId,
                 OrderDate = DateTime.Now,
                 TotalAmount = 0
@@ -76,17 +80,37 @@ namespace NguyenThiCamTu_2123110472.Controllers
 
             decimal total = 0;
 
-            // Add services from appointment to order detail
-            foreach (var appDetail in appointment.AppointmentDetails)
+            // 1. Add services from appointment (if any)
+            if (appointment != null)
             {
-                var od = new OrderDetail
+                foreach (var appDetail in appointment.AppointmentDetails)
                 {
-                    ServiceId = appDetail.ServiceId,
-                    Quantity = 1,
-                    Price = appDetail.Price
-                };
-                order.OrderDetails.Add(od);
-                total += od.Price * od.Quantity;
+                    var od = new OrderDetail
+                    {
+                        ServiceId = appDetail.ServiceId,
+                        Quantity = 1,
+                        Price = appDetail.Price
+                    };
+                    order.OrderDetails.Add(od);
+                    total += od.Price * od.Quantity;
+                }
+            }
+
+            // 2. Add services selected manually
+            foreach (var sId in request.ServiceIds)
+            {
+                var service = await _context.Services.FindAsync(sId);
+                if (service != null)
+                {
+                    var od = new OrderDetail
+                    {
+                        ServiceId = service.Id,
+                        Quantity = 1,
+                        Price = service.Price
+                    };
+                    order.OrderDetails.Add(od);
+                    total += od.Price * od.Quantity;
+                }
             }
 
             // Products
@@ -148,9 +172,20 @@ namespace NguyenThiCamTu_2123110472.Controllers
             }
 
             // Apply Room Type Multiplier
-            if (appointment.Bed?.Room?.RoomType != null)
+            decimal multiplier = 1.0m;
+            if (appointment?.Bed?.Room?.RoomType != null)
             {
-                total *= appointment.Bed.Room.RoomType.PriceMultiplier;
+                multiplier = appointment.Bed.Room.RoomType.PriceMultiplier;
+            }
+            else if (request.RoomTypeId.HasValue)
+            {
+                var rt = await _context.RoomTypes.FindAsync(request.RoomTypeId.Value);
+                if (rt != null) multiplier = rt.PriceMultiplier;
+            }
+
+            if (multiplier != 1.0m)
+            {
+                total *= multiplier;
             }
 
             order.TotalAmount = total;

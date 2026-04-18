@@ -503,34 +503,35 @@ const renderers = {
     },
 
     checkout: async () => {
-        const [customers, apps, promos, products, orders] = await Promise.all([
+        const [customers, services, promos, products, orders, roomTypes] = await Promise.all([
             apiCall('/Customers'), 
-            apiCall('/Appointments'), 
+            apiCall('/Services'), 
             apiCall('/Promotions'), 
             apiCall('/Product'), 
-            apiCall('/Orders')
+            apiCall('/Orders'),
+            apiCall('/RoomTypes')
         ]);
         
-        const paidAppIds = orders.map(o => o.appointmentId);
-
         document.getElementById('section-container').innerHTML = `
             <div class="form-row">
-                <div class="card glass"><h2>Hóa đơn mới</h2>
+                <div class="card glass"><h2>Tiếp nhận & Thanh toán</h2>
                     <div class="input-group"><label>Khách hàng</label>
                         <select id="checkout-customer">
                             <option value="">-- Chọn khách hàng --</option>
                             ${customers.map(c => `<option value="${c.id}">${c.fullName} - ${c.phoneNumber}</option>`).join('')}
                         </select>
                     </div>
-                    <div id="app-selection-group" class="input-group hidden">
-                        <label>Chọn lịch hẹn cần thanh toán</label>
-                        <select id="checkout-app">
-                            <!-- Injected by Customer listener -->
-                        </select>
-                    </div>
                     
-                    <div id="checkout-details" class="billing-summary hidden" style="background: rgba(244, 114, 182, 0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                        <!-- Injected by Appointment listener -->
+                    <div id="checkout-services-group" class="input-group hidden">
+                        <label>Chọn dịch vụ sử dụng</label>
+                        <div class="checkbox-list" id="checkout-services" style="max-height:150px">
+                            ${services.map(s => `
+                                <label class="checkbox-item">
+                                    <input type="checkbox" value="${s.id}" class="service-checkout-checkbox">
+                                    ${s.name} (${s.price.toLocaleString()}đ)
+                                </label>
+                            `).join('')}
+                        </div>
                     </div>
 
                     <div class="input-group"><label>Sản phẩm mua kèm (Nếu có)</label>
@@ -543,12 +544,22 @@ const renderers = {
                             `).join('')}
                         </div>
                     </div>
-                    <div class="input-group"><label>Khuyến mãi</label>
-                        <select id="checkout-promo">
-                            <option value="">-- Không áp dụng --</option>
-                            ${promos.map(p => `<option value="${p.id}">${p.name} (-${p.discountPercent}%)</option>`).join('')}
-                        </select>
+
+                    <div class="form-row" style="margin-bottom:0">
+                        <div class="input-group"><label>Loại phòng</label>
+                            <select id="checkout-room-type">
+                                <option value="">-- Mặc định (Phòng thường) --</option>
+                                ${roomTypes.map(rt => `<option value="${rt.id}">${rt.name} (x${rt.priceMultiplier})</option>`).join('')}
+                            </select>
+                        </div>
+                        <div class="input-group"><label>Khuyến mãi</label>
+                            <select id="checkout-promo">
+                                <option value="">-- Không áp dụng --</option>
+                                ${promos.map(p => `<option value="${p.id}">${p.name} (-${p.discountPercent}%)</option>`).join('')}
+                            </select>
+                        </div>
                     </div>
+                    
                     <div class="input-group"><label>Phương thức thanh toán</label>
                         <select id="checkout-method">
                             <option value="Tiền mặt">Tiền mặt</option>
@@ -566,51 +577,37 @@ const renderers = {
         `;
 
         const selectCust = document.getElementById('checkout-customer');
-        const selectApp = document.getElementById('checkout-app');
-        const appGroup = document.getElementById('app-selection-group');
-        const detailContainer = document.getElementById('checkout-details');
+        const serviceGroup = document.getElementById('checkout-services-group');
 
         selectCust.onchange = () => {
-            const custId = selectCust.value;
-            if (!custId) { appGroup.classList.add('hidden'); detailContainer.classList.add('hidden'); return; }
-            const custApps = apps.filter(a => a.customerId == custId && !paidAppIds.includes(a.id) && (a.status === 'Done' || a.status === 'Assigned'));
-            if (custApps.length === 0) {
-                selectApp.innerHTML = '<option value="">-- Không có lịch hẹn cần thanh toán --</option>';
-            } else {
-                selectApp.innerHTML = '<option value="">-- Chọn lịch hẹn --</option>' + custApps.map(a => `<option value="${a.id}">Lịch hẹn #${a.id} - ${new Date(a.appointmentDate).toLocaleString()}</option>`).join('');
-            }
-            appGroup.classList.remove('hidden');
-            detailContainer.classList.add('hidden');
-        };
-
-        selectApp.onchange = () => {
-            if (!selectApp.value) { detailContainer.classList.add('hidden'); return; }
-            const app = apps.find(a => a.id == selectApp.value);
-            const total = app.appointmentDetails.reduce((s, d) => s + d.price * d.quantity, 0);
-            detailContainer.innerHTML = `
-                <h4 style="margin-bottom:10px; color:var(--primary)">Dịch vụ đã sử dụng:</h4>
-                ${app.appointmentDetails.map(d => `<div style="display:flex; justify-content:space-between; font-size:0.9rem"><span>${d.service?.name}</span><strong>${d.price.toLocaleString()}đ</strong></div>`).join('')}
-                <div style="border-top:1px dashed #ddd; margin-top:10px; padding-top:10px; font-weight:bold; display:flex; justify-content:space-between"><span>Tạm tính dịch vụ:</span> <span>${total.toLocaleString()}đ</span></div>
-            `;
-            detailContainer.classList.remove('hidden');
+            if (selectCust.value) serviceGroup.classList.remove('hidden');
+            else serviceGroup.classList.add('hidden');
         };
 
         document.getElementById('btn-pay').onclick = async () => {
-            const appId = selectApp.value;
-            if (!appId) return showToast('Vui lòng chọn lịch hẹn!', 'error');
+            const custId = selectCust.value;
+            if (!custId) return showToast('Vui lòng chọn khách hàng!', 'error');
 
-            const app = apps.find(a => a.id == appId);
-            if(app.status !== 'Done') {
-                if(!confirm('Lịch hẹn này chưa hoàn tất. Bạn có muốn đánh dấu hoàn tất và thanh toán luôn không?')) return;
-                await apiCall(`/Appointments/${appId}/Complete`, 'PUT');
+            const serviceIds = Array.from(document.querySelectorAll('#checkout-services .service-checkout-checkbox:checked')).map(el => parseInt(el.value));
+            const productIds = Array.from(document.querySelectorAll('#checkout-products .product-checkbox:checked')).map(el => parseInt(el.value));
+            
+            if (serviceIds.length === 0 && productIds.length === 0) {
+                return showToast('Vui lòng chọn ít nhất một dịch vụ hoặc sản phẩm!', 'error');
             }
 
-            const productIds = Array.from(document.querySelectorAll('#checkout-products .product-checkbox:checked')).map(el => parseInt(el.value));
             const promotionId = document.getElementById('checkout-promo').value ? parseInt(document.getElementById('checkout-promo').value) : null;
             const paymentMethod = document.getElementById('checkout-method').value;
+            const roomTypeId = document.getElementById('checkout-room-type').value ? parseInt(document.getElementById('checkout-room-type').value) : null;
             
             try {
-                await apiCall('/Orders/Checkout', 'POST', { appointmentId: parseInt(appId), productIds, promotionId, paymentMethod });
+                await apiCall('/Orders/Checkout', 'POST', { 
+                    customerId: parseInt(custId), 
+                    serviceIds, 
+                    productIds, 
+                    promotionId, 
+                    paymentMethod,
+                    roomTypeId
+                });
                 showToast('Thanh toán thành công!');
                 renderers.checkout();
             } catch (err) {}
@@ -663,39 +660,54 @@ const renderers = {
 window.addItem = (type) => openCRUDModal(type);
 
 window.assignStaff = async (id) => {
-    const staffs = await apiCall('/Staffs');
-    if (!staffs.length) return showToast('Không có nhân viên nào sẵn sàng.', 'error');
-    
+    const [app, staffs, beds] = await Promise.all([
+        apiCall(`/Appointments/${id}`), 
+        apiCall('/Staffs'), 
+        apiCall(`/Appointments/${id}/AvailableBeds`)
+    ]);
     const modal = document.getElementById('edit-modal');
     const fields = document.getElementById('modal-fields');
-    const form = document.getElementById('edit-form');
     const title = document.getElementById('modal-title');
-    
-    title.textContent = 'Phân công nhân viên';
+    const form = document.getElementById('edit-form');
+
+    title.textContent = `Phân công nhân viên & Giường: #${id}`;
     modal.classList.remove('hidden');
-    
+
     fields.innerHTML = `
         <div class="input-group">
-            <label>Chọn kỹ thuật viên</label>
-            <select name="staffId" required>
+            <label>Chọn nhân viên (${app.customer?.fullName})</label>
+            <select name="staffId" id="assign-staff" required>
                 <option value="">-- Chọn nhân viên --</option>
-                ${staffs.filter(s => s.position === 'Kỹ thuật viên').map(s => `<option value="${s.id}">${s.fullName} - ${s.position}</option>`).join('')}
+                ${staffs.map(s => `<option value="${s.id}" ${app.staffId == s.id ? 'selected' : ''}>${s.fullName}</option>`).join('')}
             </select>
         </div>
-        <p style="font-size: 0.8rem; color: #64748b; margin-top: 10px;">Lưu ý: Hệ thống sẽ kiểm tra trùng lịch khi bạn xác nhận.</p>
+        <div class="input-group">
+            <label>Chọn Giường trống (Dựa trên khung giờ: ${new Date(app.appointmentDate).toLocaleTimeString()})</label>
+            <select name="bedId" id="assign-bed" required>
+                <option value="">-- Chọn giường --</option>
+                ${beds.length === 0 ? '<option value="" disabled>Không còn giường trống khung giờ này</option>' : beds.map(b => `
+                    <option value="${b.id}" ${app.bedId == b.id ? 'selected' : ''}>
+                        ${b.bedName} - ${b.room?.roomName} (${b.room?.roomType?.name})
+                    </option>
+                `).join('')}
+            </select>
+        </div>
     `;
-    
+
     form.onsubmit = async (e) => {
         e.preventDefault();
-        const staffId = parseInt(new FormData(e.target).get('staffId'));
+        const staffId = document.getElementById('assign-staff').value;
+        const bedId = document.getElementById('assign-bed').value;
+
         try {
-            await apiCall(`/Appointments/${id}/AssignStaff`, 'PUT', staffId);
+            await apiCall(`/Appointments/${id}/Assign`, 'PUT', { 
+                staffId: parseInt(staffId), 
+                bedId: parseInt(bedId) 
+            });
             modal.classList.add('hidden');
-            showToast('Đã phân công nhân viên!');
+            showToast('Phân công thành công!');
             renderers.appointments();
-        } catch (err) {
-            // Lỗi trùng lịch hoặc lỗi khác sẽ được apiCall hiển thị toast
-        }
+        } catch (err) {}
     };
 };
 
@@ -707,7 +719,7 @@ window.editAppointment = async (id) => {
         apiCall('/Customers'),
         apiCall('/Services'),
         apiCall('/Staffs'),
-        apiCall('/Beds')
+        apiCall(`/Appointments/${id}/AvailableBeds`)
     ]);
 
     const modal = document.getElementById('edit-modal');
@@ -743,10 +755,10 @@ window.editAppointment = async (id) => {
                 ${staffs.filter(s => s.position === 'Kỹ thuật viên').map(s => `<option value="${s.id}" ${s.id === app.staffId ? 'selected' : ''}>${s.fullName}</option>`).join('')}
             </select>
         </div>
-        <div class="input-group"><label>Giường/Phòng</label>
+        <div class="input-group"><label>Giường/Phòng (Trống trong khung giờ này)</label>
             <select name="bedId">
                 <option value="">-- Chọn sau --</option>
-                ${beds.filter(b => b.status === 'Available' || b.id === app.bedId).map(b => `<option value="${b.id}" ${b.id === app.bedId ? 'selected' : ''}>${b.bedName} (${b.room?.roomName} - ${b.room?.roomType?.name})</option>`).join('')}
+                ${beds.map(b => `<option value="${b.id}" ${b.id === app.bedId ? 'selected' : ''}>${b.bedName} (${b.room?.roomName} - ${b.room?.roomType?.name})</option>`).join('')}
             </select>
         </div>
     `;
@@ -782,6 +794,8 @@ window.showQuickCheckoutModal = async (id) => {
     modal.classList.remove('hidden');
 
     const totalBeforePromo = app.appointmentDetails.reduce((sum, d) => sum + d.price * d.quantity, 0);
+    const multiplier = app.bed?.room?.roomType?.priceMultiplier || 1.0;
+    const roomName = app.bed?.room?.roomType?.name || "Thường";
 
     fields.innerHTML = `
         <div class="billing-summary" style="padding: 15px; background: rgba(244, 114, 182, 0.05); border-radius: 12px; margin-bottom: 20px;">
@@ -792,9 +806,15 @@ window.showQuickCheckoutModal = async (id) => {
                     <strong>${d.price.toLocaleString()}đ</strong>
                 </div>
             `).join('')}
+            ${multiplier !== 1 ? `
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #DB2777; margin-top: 5px;">
+                    <span>Phụ phí loại phòng (${roomName}):</span>
+                    <strong>x${multiplier}</strong>
+                </div>
+            ` : ''}
             <div style="border-top: 1px dashed #ddd; margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between; font-weight: 700;">
                 <span>Tạm tính:</span>
-                <span id="label-total">${totalBeforePromo.toLocaleString()}đ</span>
+                <span id="label-total">${(totalBeforePromo * multiplier).toLocaleString()}đ</span>
             </div>
         </div>
         <div class="input-group">
