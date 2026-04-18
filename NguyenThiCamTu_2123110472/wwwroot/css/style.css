@@ -498,3 +498,38 @@ tr:hover {
     box-shadow: var(--shadow);
     outline: none;
 }
+
+/* Checkbox List Styles */
+.checkbox-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    padding: 12px;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: var(--transition);
+    padding: 4px;
+    border-radius: 6px;
+}
+
+.checkbox-item:hover {
+    background: rgba(244, 114, 182, 0.05);
+}
+
+.checkbox-item input[type="checkbox"] {
+    width: 20px !important;
+    height: 20px !important;
+    cursor: pointer;
+    accent-color: var(--primary);
+}

@@ -251,11 +251,18 @@ async function openCRUDModal(type, id = null) {
             <div class="input-group"><label>Giảm (%)</label><input type="number" name="pct" value="${data.discountPercent || 0}" required></div>
             <div class="input-group"><label>Số lần dùng tối đa</label><input type="number" name="maxUsage" value="${data.maxUsage || ''}" placeholder="Để trống nếu không giới hạn"></div>
             <div class="input-group"><label>Dịch vụ áp dụng</label>
-                <select name="applicableServices" multiple style="height:120px">
-                    <option value="ALL" ${!data.applicableServiceIds || data.applicableServiceIds === 'ALL' ? 'selected' : ''}>Tất cả dịch vụ</option>
-                    ${services.map(s => `<option value="${s.id}" ${currentAppIds.includes(s.id.toString()) ? 'selected' : ''}>${s.name}</option>`).join('')}
-                </select>
-                <small style="color:#666; font-size:0.75rem">Giữ phím Ctrl để chọn nhiều dịch vụ</small>
+                <div class="checkbox-list">
+                    <label class="checkbox-item">
+                        <input type="checkbox" name="applicableServices" value="ALL" ${!data.applicableServiceIds || data.applicableServiceIds === 'ALL' ? 'checked' : ''} onchange="const others = this.closest('.checkbox-list').querySelectorAll('.service-checkbox'); if(this.checked) others.forEach(c => c.checked = false)">
+                        <strong>Tất cả dịch vụ</strong>
+                    </label>
+                    ${services.map(s => `
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="applicableServices" value="${s.id}" ${currentAppIds.includes(s.id.toString()) ? 'checked' : ''} class="service-checkbox" onchange="if(this.checked) this.closest('.checkbox-list').querySelector('input[value=\'ALL\']').checked = false">
+                            ${s.name}
+                        </label>
+                    `).join('')}
+                </div>
             </div>
             <div class="form-row">
                 <div class="input-group"><label>Ngày bắt đầu</label><input type="date" name="startDate" value="${new Date(data.startDate || Date.now()).toISOString().split('T')[0]}" required></div>
@@ -309,8 +316,8 @@ async function openCRUDModal(type, id = null) {
         if (type === 'service') body = {...body, name: fd.get('name'), price: parseFloat(fd.get('price')), durationMinutes: parseInt(fd.get('duration'))};
         if (type === 'product') body = {...body, name: fd.get('name'), price: parseFloat(fd.get('price')), stockQuantity: parseInt(fd.get('stock'))};
         if (type === 'promotion') {
-            const appServices = Array.from(e.target.applicableServices.selectedOptions).map(o => o.value);
-            const appIds = appServices.includes('ALL') ? 'ALL' : (',' + appServices.join(',') + ',');
+            const appServices = fd.getAll('applicableServices');
+            const appIds = appServices.includes('ALL') ? 'ALL' : (appServices.length > 0 ? (',' + appServices.join(',') + ',') : 'ALL');
             body = {...body, 
                 name: fd.get('name'), 
                 discountPercent: parseFloat(fd.get('pct')), 
@@ -440,18 +447,26 @@ const renderers = {
                     <div class="input-group" style="align-self:flex-end"><button type="submit" class="btn-primary">Xác nhận</button></div>
                 </div></form></div>
             <table><thead><tr><th>Khách hàng</th><th>Ngày hẹn</th><th>Vị trí</th><th>NV thực hiện</th><th>Trạng thái</th><th>Dịch vụ</th><th style="text-align:right">Thao tác</th></tr></thead>
-            <tbody>${apps.map(a => {
-                const appDate = new Date(a.appointmentDate);
-                const now = new Date();
-                const canEdit = (appDate - now) > 30 * 60000;
-                return `<tr><td><strong>${a.customer?.fullName || 'N/A'}</strong></td><td>${appDate.toLocaleString()}</td><td>${a.bed ? `${a.bed.bedName} (${a.bed.room?.roomName})` : '<em style="color:#94a3b8">Chưa gán</em>'}</td><td>${a.staff?.fullName || '<em style="color:#94a3b8">Chưa gán</em>'}</td><td><span class="badge badge-${a.status.toLowerCase()}">${a.status}</span></td><td>${a.appointmentDetails?.map(d => d.service?.name).join(', ') || ''}</td>
-                <td style="text-align:right">
-                    ${canEdit ? `<button onclick="editAppointment(${a.id})" class="btn-edit" title="Chỉnh sửa chi tiết"><i class="fas fa-edit"></i> Sửa chi tiết</button>` : `<button class="btn-edit" style="background:#ccc; cursor:not-allowed" title="Quá hạn chỉnh sửa" onclick="showToast('Chỉ có thể sửa trước giờ hẹn 30 phút','error')"><i class="fas fa-edit"></i> Sửa chi tiết</button>`}
-                    ${a.status === 'Pending' ? `<button onclick="assignStaff(${a.id})" class="btn-edit" style="background:#10B981" title="Gán NV">Gán NV</button>` : ''} 
-                    ${a.status === 'Assigned' ? `<button onclick="completeAppointment(${a.id})" class="btn-edit" style="background:#3B82F6" title="Xong">Xong</button>` : ''}
-                    <button class="btn-danger" onclick="deleteItem('/Appointments', ${a.id}, 'Lịch #${a.id}')" title="Hủy"><i class="fas fa-trash"></i></button>
-                </td></tr>`;
-            }).join('')}</tbody></table>
+            <tbody>${await (async () => {
+                const orders = await apiCall('/Orders');
+                const paidAppIds = orders.map(o => o.appointmentId);
+                return apps.map(a => {
+                    const appDate = new Date(a.appointmentDate);
+                    const now = new Date();
+                    const canEdit = (appDate - now) > 30 * 60000;
+                    const isPaid = paidAppIds.includes(a.id);
+                    const isCompletedOrAssigned = a.status === 'Done' || a.status === 'Assigned';
+
+                    return `<tr><td><strong>${a.customer?.fullName || 'N/A'}</strong></td><td>${appDate.toLocaleString()}</td><td>${a.bed ? `${a.bed.bedName} (${a.bed.room?.roomName})` : '<em style="color:#94a3b8">Chưa gán</em>'}</td><td>${a.staff?.fullName || '<em style="color:#94a3b8">Chưa gán</em>'}</td><td><span class="badge badge-${a.status.toLowerCase()}">${a.status}</span></td><td>${a.appointmentDetails?.map(d => d.service?.name).join(', ') || ''}</td>
+                    <td style="text-align:right">
+                        ${!isPaid && a.status !== 'Done' ? (canEdit ? `<button onclick="editAppointment(${a.id})" class="btn-edit" title="Chỉnh sửa chi tiết"><i class="fas fa-edit"></i> Sửa chi tiết</button>` : `<button class="btn-edit" style="background:#ccc; cursor:not-allowed" title="Quá hạn chỉnh sửa" onclick="showToast('Chỉ có thể sửa trước giờ hẹn 30 phút','error')"><i class="fas fa-edit"></i> Sửa chi tiết</button>`) : ''}
+                        ${a.status === 'Pending' ? `<button onclick="assignStaff(${a.id})" class="btn-edit" style="background:#10B981" title="Gán NV">Gán NV</button>` : ''} 
+                        ${a.status === 'Assigned' ? `<button onclick="completeAppointment(${a.id})" class="btn-edit" style="background:#3B82F6" title="Xong">Xong</button>` : ''}
+                        ${isCompletedOrAssigned && !isPaid ? `<button onclick="window.showQuickCheckoutModal(${a.id})" class="btn-edit" style="background:#F472B6" title="Thanh toán"><i class="fas fa-credit-card"></i> Thanh toán</button>` : ''}
+                        ${isPaid ? `<span class="badge badge-active"><i class="fas fa-check"></i> Đã thanh toán</span>` : `<button class="btn-danger" onclick="deleteItem('/Appointments', ${a.id}, 'Lịch #${a.id}')" title="Hủy"><i class="fas fa-trash"></i></button>`}
+                    </td></tr>`;
+                }).join('');
+            })()}</tbody></table>
         `;
         document.getElementById('booking-form').onsubmit = async (e) => {
             e.preventDefault();
@@ -492,22 +507,61 @@ const renderers = {
         document.getElementById('section-container').innerHTML = `
             <div class="form-row">
                 <div class="card glass"><h2>Thanh toán</h2>
-                    <div class="input-group"><label>Lịch hẹn đã xong</label><select id="checkout-app"><option value="">-- Chọn khách --</option>${apps.filter(a => a.status === 'Done').map(a => `<option value="${a.id}">${a.customer?.fullName}</option>`).join('')}</select></div>
-                    <div class="input-group"><label>Sản phẩm</label><select id="checkout-products" multiple style="height:60px">${products.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}</select></div>
-                    <div class="input-group"><label>Khuyến mãi</label><select id="checkout-promo"><option value="">Không</option>${promos.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}</select></div>
-                    <button class="btn-primary" id="btn-pay" style="margin-top:15px">Thanh toán</button>
+                    <div class="input-group"><label>Lịch hẹn đã xong</label>
+                        <select id="checkout-app">
+                            <option value="">-- Chọn lịch hẹn --</option>
+                            ${apps.filter(a => a.status === 'Done' && !orders.some(o => o.appointmentId === a.id)).map(a => `<option value="${a.id}">${a.customer?.fullName} - #${a.id}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div id="checkout-details" class="billing-summary hidden" style="background: rgba(244, 114, 182, 0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                        <!-- Injected by Select listener -->
+                    </div>
+                    <div class="input-group"><label>Sản phẩm mua kèm (Nếu có)</label>
+                        <div class="checkbox-list" id="checkout-products" style="max-height:100px">
+                            ${products.map(p => `
+                                <label class="checkbox-item">
+                                    <input type="checkbox" value="${p.id}" class="product-checkbox">
+                                    ${p.name} (${p.price.toLocaleString()}đ)
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>
+                    <div class="input-group"><label>Khuyến mãi</label><select id="checkout-promo"><option value="">Không</option>${promos.map(p => `<option value="${p.id}">${p.name} (-${p.discountPercent}%)</option>`).join('')}</select></div>
+                    <button class="btn-primary" id="btn-pay" style="margin-top:15px">Xác nhận thanh toán</button>
                 </div>
-                <div class="card glass"><h2>Lịch sử</h2><div style="max-height:300px; overflow-y:auto"><table>
-                <thead><tr><th>ID</th><th>Ngày</th><th>Tổng</th>${state.user?.role === 'Admin' ? '<th>Xóa</th>' : ''}</tr></thead>
-                <tbody>${orders.map(o => `<tr><td>#${o.id}</td><td>${new Date(o.orderDate).toLocaleDateString()}</td><td>${o.totalAmount.toLocaleString()}đ</td>
-                ${state.user?.role === 'Admin' ? `<td><button class="btn-danger" onclick="deleteItem('/Orders', ${o.id}, 'HĐ #${o.id}')">Xóa</button></td>` : ''}</tr>`).join('')}</tbody></table></div></div>
+                <div class="card glass"><h2>Lịch sử giao dịch</h2><div style="max-height:400px; overflow-y:auto"><table>
+                <thead><tr><th>HĐ</th><th>Khách hàng</th><th>Tổng tiền</th>${state.user?.role === 'Admin' ? '<th>Xóa</th>' : ''}</tr></thead>
+                <tbody>${orders.sort((a,b) => b.id - a.id).map(o => `<tr><td>#${o.id}</td><td><strong>${o.customer?.fullName || 'N/A'}</strong><br><small>${new Date(o.orderDate).toLocaleString()}</small></td><td><strong>${o.totalAmount.toLocaleString()}đ</strong></td>
+                ${state.user?.role === 'Admin' ? `<td><button class="btn-danger" onclick="deleteItem('/Orders', ${o.id}, 'HĐ #${o.id}')"><i class="fas fa-trash"></i></button></td>` : ''}</tr>`).join('')}</tbody></table></div></div>
             </div>
         `;
+
+        const selectApp = document.getElementById('checkout-app');
+        selectApp.onchange = async () => {
+            const detailContainer = document.getElementById('checkout-details');
+            if (!selectApp.value) { detailContainer.classList.add('hidden'); return; }
+            
+            const app = apps.find(a => a.id == selectApp.value);
+            const total = app.appointmentDetails.reduce((s, d) => s + d.price * d.quantity, 0);
+            detailContainer.innerHTML = `
+                <h4 style="margin-bottom:10px; color:var(--primary)">Dịch vụ đã sử dụng:</h4>
+                ${app.appointmentDetails.map(d => `<div style="display:flex; justify-content:space-between; font-size:0.9rem"><span>${d.service?.name}</span><strong>${d.price.toLocaleString()}đ</strong></div>`).join('')}
+                <div style="border-top:1px dashed #ddd; margin-top:10px; padding-top:10px; font-weight:bold; display:flex; justify-content:space-between"><span>Tạm tính dịch vụ:</span> <span>${total.toLocaleString()}đ</span></div>
+            `;
+            detailContainer.classList.remove('hidden');
+        };
+
         document.getElementById('btn-pay').onclick = async () => {
             const appId = document.getElementById('checkout-app').value;
-            if (!appId) return showToast('Chọn lịch!', 'error');
-            await apiCall('/Orders/Checkout', 'POST', { appointmentId: parseInt(appId), productIds: Array.from(document.getElementById('checkout-products').selectedOptions).map(o => parseInt(o.value)), promotionId: document.getElementById('checkout-promo').value ? parseInt(document.getElementById('checkout-promo').value) : null });
-            showToast('Thành công!'); renderers.checkout();
+            if (!appId) return showToast('Vui lòng chọn lịch hẹn!', 'error');
+            const productIds = Array.from(document.querySelectorAll('#checkout-products .product-checkbox:checked')).map(el => parseInt(el.value));
+            const promotionId = document.getElementById('checkout-promo').value ? parseInt(document.getElementById('checkout-promo').value) : null;
+            
+            try {
+                await apiCall('/Orders/Checkout', 'POST', { appointmentId: parseInt(appId), productIds, promotionId });
+                showToast('Thanh toán thành công!');
+                renderers.checkout();
+            } catch (err) {}
         };
     },
 
@@ -619,9 +673,14 @@ window.editAppointment = async (id) => {
             <select name="customerId" disabled>${customers.map(c => `<option value="${c.id}" ${c.id === app.customerId ? 'selected' : ''}>${c.fullName}</option>`).join('')}</select>
         </div>
         <div class="input-group"><label>Dịch vụ (Chọn nhiều)</label>
-            <select name="serviceIds" multiple style="height:100px" required>
-                ${services.map(s => `<option value="${s.id}" ${currentServiceIds.includes(s.id) ? 'selected' : ''}>${s.name}</option>`).join('')}
-            </select>
+            <div class="checkbox-list">
+                ${services.map(s => `
+                    <label class="checkbox-item">
+                        <input type="checkbox" name="serviceIds" value="${s.id}" ${currentServiceIds.includes(s.id) ? 'checked' : ''}>
+                        ${s.name}
+                    </label>
+                `).join('')}
+            </div>
         </div>
         <div class="input-group"><label>Ngày giờ</label>
             <input type="datetime-local" name="appointmentDate" value="${toLocalISOString(new Date(app.appointmentDate))}" required>
@@ -646,7 +705,7 @@ window.editAppointment = async (id) => {
         const body = {
             customerId: app.customerId,
             appointmentDate: fd.get('appointmentDate'),
-            serviceIds: Array.from(fd.getAll('serviceIds')).map(id => parseInt(id)),
+            serviceIds: fd.getAll('serviceIds').map(id => parseInt(id)),
             staffId: fd.get('staffId') ? parseInt(fd.get('staffId')) : null,
             bedId: fd.get('bedId') ? parseInt(fd.get('bedId')) : null
         };
@@ -655,6 +714,71 @@ window.editAppointment = async (id) => {
             await apiCall(`/Appointments/${id}`, 'PUT', body);
             modal.classList.add('hidden');
             showToast('Cập nhật lịch hẹn thành công!');
+            renderers.appointments();
+        } catch (err) {}
+    };
+};
+
+window.showQuickCheckoutModal = async (id) => {
+    const [app, promos] = await Promise.all([apiCall(`/Appointments/${id}`), apiCall('/Promotions')]);
+    const modal = document.getElementById('edit-modal');
+    const fields = document.getElementById('modal-fields');
+    const title = document.getElementById('modal-title');
+    const form = document.getElementById('edit-form');
+
+    title.textContent = `Thanh toán: #${app.id} - ${app.customer?.fullName}`;
+    modal.classList.remove('hidden');
+
+    const totalBeforePromo = app.appointmentDetails.reduce((sum, d) => sum + d.price * d.quantity, 0);
+
+    fields.innerHTML = `
+        <div class="billing-summary" style="padding: 15px; background: rgba(244, 114, 182, 0.05); border-radius: 12px; margin-bottom: 20px;">
+            <h4 style="margin-bottom: 10px; color: var(--primary);">Dịch vụ đã sử dụng:</h4>
+            ${app.appointmentDetails.map(d => `
+                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px;">
+                    <span>${d.service?.name}</span>
+                    <strong>${d.price.toLocaleString()}đ</strong>
+                </div>
+            `).join('')}
+            <div style="border-top: 1px dashed #ddd; margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between; font-weight: 700;">
+                <span>Tạm tính:</span>
+                <span id="label-total">${totalBeforePromo.toLocaleString()}đ</span>
+            </div>
+        </div>
+        <div class="input-group">
+            <label>Áp dụng mã giảm giá</label>
+            <select id="quick-promo">
+                <option value="">-- Không sử dụng --</option>
+                ${promos.map(p => `<option value="${p.id}">${p.name} (-${p.discountPercent}%)</option>`).join('')}
+            </select>
+        </div>
+    `;
+    
+    document.getElementById('quick-promo').onchange = (e) => {
+        const promo = promos.find(p => p.id == e.target.value);
+        if (promo) {
+            const discount = totalBeforePromo * (promo.discountPercent / 100);
+            document.getElementById('label-total').textContent = `${(totalBeforePromo - discount).toLocaleString()}đ (Đã giảm)`;
+        } else {
+            document.getElementById('label-total').textContent = `${totalBeforePromo.toLocaleString()}đ`;
+        }
+    };
+
+    form.onsubmit = async (e) => {
+        e.preventDefault();
+        const promotionId = document.getElementById('quick-promo').value ? parseInt(document.getElementById('quick-promo').value) : null;
+        
+        // Auto-complete if not Done
+        if (app.status !== 'Done') {
+            try {
+                await apiCall(`/Appointments/${app.id}/Complete`, 'PUT');
+            } catch (err) { return; }
+        }
+
+        try {
+            await apiCall('/Orders/Checkout', 'POST', { appointmentId: app.id, promotionId, productIds: [] });
+            modal.classList.add('hidden');
+            showToast('Thanh toán thành công!');
             renderers.appointments();
         } catch (err) {}
     };
