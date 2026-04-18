@@ -47,6 +47,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
             public int AppointmentId { get; set; }
             public List<int> ProductIds { get; set; } = new List<int>();
             public int? PromotionId { get; set; }
+            public string PaymentMethod { get; set; } = "Tiền mặt";
         }
 
         [HttpPost("Checkout")]
@@ -153,6 +154,16 @@ namespace NguyenThiCamTu_2123110472.Controllers
             }
 
             order.TotalAmount = total;
+            
+            // Add Payment record
+            var payment = new Payment
+            {
+                PaymentMethod = request.PaymentMethod,
+                Amount = total,
+                PaymentDate = DateTime.Now,
+                Status = "Completed"
+            };
+            order.Payments.Add(payment);
             
             _context.Orders.Add(order);
 

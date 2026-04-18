@@ -503,19 +503,36 @@ const renderers = {
     },
 
     checkout: async () => {
-        const [apps, promos, products, orders] = await Promise.all([apiCall('/Appointments'), apiCall('/Promotions'), apiCall('/Product'), apiCall('/Orders')]);
+        const [customers, apps, promos, products, orders] = await Promise.all([
+            apiCall('/Customers'), 
+            apiCall('/Appointments'), 
+            apiCall('/Promotions'), 
+            apiCall('/Product'), 
+            apiCall('/Orders')
+        ]);
+        
+        const paidAppIds = orders.map(o => o.appointmentId);
+
         document.getElementById('section-container').innerHTML = `
             <div class="form-row">
-                <div class="card glass"><h2>Thanh toán</h2>
-                    <div class="input-group"><label>Lịch hẹn đã xong</label>
-                        <select id="checkout-app">
-                            <option value="">-- Chọn lịch hẹn --</option>
-                            ${apps.filter(a => a.status === 'Done' && !orders.some(o => o.appointmentId === a.id)).map(a => `<option value="${a.id}">${a.customer?.fullName} - #${a.id}</option>`).join('')}
+                <div class="card glass"><h2>Hóa đơn mới</h2>
+                    <div class="input-group"><label>Khách hàng</label>
+                        <select id="checkout-customer">
+                            <option value="">-- Chọn khách hàng --</option>
+                            ${customers.map(c => `<option value="${c.id}">${c.fullName} - ${c.phoneNumber}</option>`).join('')}
                         </select>
                     </div>
-                    <div id="checkout-details" class="billing-summary hidden" style="background: rgba(244, 114, 182, 0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
-                        <!-- Injected by Select listener -->
+                    <div id="app-selection-group" class="input-group hidden">
+                        <label>Chọn lịch hẹn cần thanh toán</label>
+                        <select id="checkout-app">
+                            <!-- Injected by Customer listener -->
+                        </select>
                     </div>
+                    
+                    <div id="checkout-details" class="billing-summary hidden" style="background: rgba(244, 114, 182, 0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px;">
+                        <!-- Injected by Appointment listener -->
+                    </div>
+
                     <div class="input-group"><label>Sản phẩm mua kèm (Nếu có)</label>
                         <div class="checkbox-list" id="checkout-products" style="max-height:100px">
                             ${products.map(p => `
@@ -526,21 +543,48 @@ const renderers = {
                             `).join('')}
                         </div>
                     </div>
-                    <div class="input-group"><label>Khuyến mãi</label><select id="checkout-promo"><option value="">Không</option>${promos.map(p => `<option value="${p.id}">${p.name} (-${p.discountPercent}%)</option>`).join('')}</select></div>
-                    <button class="btn-primary" id="btn-pay" style="margin-top:15px">Xác nhận thanh toán</button>
+                    <div class="input-group"><label>Khuyến mãi</label>
+                        <select id="checkout-promo">
+                            <option value="">-- Không áp dụng --</option>
+                            ${promos.map(p => `<option value="${p.id}">${p.name} (-${p.discountPercent}%)</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="input-group"><label>Phương thức thanh toán</label>
+                        <select id="checkout-method">
+                            <option value="Tiền mặt">Tiền mặt</option>
+                            <option value="Chuyển khoản">Chuyển khoản</option>
+                            <option value="Thẻ ATM/Visa">Thẻ ATM/Visa</option>
+                        </select>
+                    </div>
+                    <button class="btn-primary" id="btn-pay" style="margin-top:15px">Hoàn tất thanh toán</button>
                 </div>
-                <div class="card glass"><h2>Lịch sử giao dịch</h2><div style="max-height:400px; overflow-y:auto"><table>
+                <div class="card glass"><h2>Lịch sử giao dịch</h2><div style="max-height:500px; overflow-y:auto"><table>
                 <thead><tr><th>HĐ</th><th>Khách hàng</th><th>Tổng tiền</th>${state.user?.role === 'Admin' ? '<th>Xóa</th>' : ''}</tr></thead>
                 <tbody>${orders.sort((a,b) => b.id - a.id).map(o => `<tr><td>#${o.id}</td><td><strong>${o.customer?.fullName || 'N/A'}</strong><br><small>${new Date(o.orderDate).toLocaleString()}</small></td><td><strong>${o.totalAmount.toLocaleString()}đ</strong></td>
                 ${state.user?.role === 'Admin' ? `<td><button class="btn-danger" onclick="deleteItem('/Orders', ${o.id}, 'HĐ #${o.id}')"><i class="fas fa-trash"></i></button></td>` : ''}</tr>`).join('')}</tbody></table></div></div>
             </div>
         `;
 
+        const selectCust = document.getElementById('checkout-customer');
         const selectApp = document.getElementById('checkout-app');
-        selectApp.onchange = async () => {
-            const detailContainer = document.getElementById('checkout-details');
+        const appGroup = document.getElementById('app-selection-group');
+        const detailContainer = document.getElementById('checkout-details');
+
+        selectCust.onchange = () => {
+            const custId = selectCust.value;
+            if (!custId) { appGroup.classList.add('hidden'); detailContainer.classList.add('hidden'); return; }
+            const custApps = apps.filter(a => a.customerId == custId && !paidAppIds.includes(a.id) && (a.status === 'Done' || a.status === 'Assigned'));
+            if (custApps.length === 0) {
+                selectApp.innerHTML = '<option value="">-- Không có lịch hẹn cần thanh toán --</option>';
+            } else {
+                selectApp.innerHTML = '<option value="">-- Chọn lịch hẹn --</option>' + custApps.map(a => `<option value="${a.id}">Lịch hẹn #${a.id} - ${new Date(a.appointmentDate).toLocaleString()}</option>`).join('');
+            }
+            appGroup.classList.remove('hidden');
+            detailContainer.classList.add('hidden');
+        };
+
+        selectApp.onchange = () => {
             if (!selectApp.value) { detailContainer.classList.add('hidden'); return; }
-            
             const app = apps.find(a => a.id == selectApp.value);
             const total = app.appointmentDetails.reduce((s, d) => s + d.price * d.quantity, 0);
             detailContainer.innerHTML = `
@@ -552,13 +596,21 @@ const renderers = {
         };
 
         document.getElementById('btn-pay').onclick = async () => {
-            const appId = document.getElementById('checkout-app').value;
+            const appId = selectApp.value;
             if (!appId) return showToast('Vui lòng chọn lịch hẹn!', 'error');
+
+            const app = apps.find(a => a.id == appId);
+            if(app.status !== 'Done') {
+                if(!confirm('Lịch hẹn này chưa hoàn tất. Bạn có muốn đánh dấu hoàn tất và thanh toán luôn không?')) return;
+                await apiCall(`/Appointments/${appId}/Complete`, 'PUT');
+            }
+
             const productIds = Array.from(document.querySelectorAll('#checkout-products .product-checkbox:checked')).map(el => parseInt(el.value));
             const promotionId = document.getElementById('checkout-promo').value ? parseInt(document.getElementById('checkout-promo').value) : null;
+            const paymentMethod = document.getElementById('checkout-method').value;
             
             try {
-                await apiCall('/Orders/Checkout', 'POST', { appointmentId: parseInt(appId), productIds, promotionId });
+                await apiCall('/Orders/Checkout', 'POST', { appointmentId: parseInt(appId), productIds, promotionId, paymentMethod });
                 showToast('Thanh toán thành công!');
                 renderers.checkout();
             } catch (err) {}
@@ -752,6 +804,14 @@ window.showQuickCheckoutModal = async (id) => {
                 ${promos.map(p => `<option value="${p.id}">${p.name} (-${p.discountPercent}%)</option>`).join('')}
             </select>
         </div>
+        <div class="input-group">
+            <label>Phương thức thanh toán</label>
+            <select id="quick-method">
+                <option value="Tiền mặt">Tiền mặt</option>
+                <option value="Chuyển khoản">Chuyển khoản</option>
+                <option value="Thẻ ATM/Visa">Thẻ ATM/Visa</option>
+            </select>
+        </div>
     `;
     
     document.getElementById('quick-promo').onchange = (e) => {
@@ -767,6 +827,7 @@ window.showQuickCheckoutModal = async (id) => {
     form.onsubmit = async (e) => {
         e.preventDefault();
         const promotionId = document.getElementById('quick-promo').value ? parseInt(document.getElementById('quick-promo').value) : null;
+        const paymentMethod = document.getElementById('quick-method').value;
         
         // Auto-complete if not Done
         if (app.status !== 'Done') {
@@ -776,7 +837,7 @@ window.showQuickCheckoutModal = async (id) => {
         }
 
         try {
-            await apiCall('/Orders/Checkout', 'POST', { appointmentId: app.id, promotionId, productIds: [] });
+            await apiCall('/Orders/Checkout', 'POST', { appointmentId: app.id, promotionId, productIds: [], paymentMethod });
             modal.classList.add('hidden');
             showToast('Thanh toán thành công!');
             renderers.appointments();
