@@ -22,6 +22,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         public async Task<ActionResult<IEnumerable<Order>>> GetOrders()
         {
             return await _context.Orders
+                .Include(o => o.Customer)
                 .Include(o => o.OrderDetails)
                     .ThenInclude(od => od.Service)
                 .Include(o => o.OrderDetails)
@@ -33,6 +34,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         public async Task<ActionResult<Order>> GetOrder(int id)
         {
             var order = await _context.Orders
+                .Include(o => o.Customer)
                 .Include(o => o.OrderDetails)
                 .FirstOrDefaultAsync(o => o.Id == id);
 
