@@ -802,16 +802,10 @@ window.showQuickCheckoutModal = async (id) => {
             <h4 style="margin-bottom: 10px; color: var(--primary);">Dịch vụ đã sử dụng:</h4>
             ${app.appointmentDetails.map(d => `
                 <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px;">
-                    <span>${d.service?.name}</span>
-                    <strong>${d.price.toLocaleString()}đ</strong>
+                    <span>${d.service?.name} ${multiplier !== 1 ? `(<small style="color:var(--primary)">x${multiplier}</small>)` : ''}</span>
+                    <strong>${(d.price * multiplier).toLocaleString()}đ</strong>
                 </div>
             `).join('')}
-            ${multiplier !== 1 ? `
-                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; color: #DB2777; margin-top: 5px;">
-                    <span>Phụ phí loại phòng (${roomName}):</span>
-                    <strong>x${multiplier}</strong>
-                </div>
-            ` : ''}
             <div style="border-top: 1px dashed #ddd; margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between; font-weight: 700;">
                 <span>Tạm tính:</span>
                 <span id="label-total">${(totalBeforePromo * multiplier).toLocaleString()}đ</span>

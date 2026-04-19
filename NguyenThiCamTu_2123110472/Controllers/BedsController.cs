@@ -15,12 +15,12 @@ namespace NguyenThiCamTu_2123110472.Controllers
         public BedsController(AppDbContext context) { _context = context; }
 
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Bed>>> GetBeds() => await _context.Beds.Include(b => b.Room).ThenInclude(r => r.RoomType).ToListAsync();
+        public async Task<ActionResult<IEnumerable<Bed>>> GetBeds() => await _context.Beds.Include(b => b.Room).ThenInclude(r => r!.RoomType).ToListAsync();
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Bed>> GetBed(int id)
         {
-            var item = await _context.Beds.Include(b => b.Room).ThenInclude(r => r.RoomType).FirstOrDefaultAsync(x => x.Id == id);
+            var item = await _context.Beds.Include(b => b.Room).ThenInclude(r => r!.RoomType).FirstOrDefaultAsync(x => x.Id == id);
             return item == null ? NotFound() : item;
         }
 

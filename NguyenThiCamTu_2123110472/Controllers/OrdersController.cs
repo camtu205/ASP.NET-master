@@ -59,8 +59,8 @@ namespace NguyenThiCamTu_2123110472.Controllers
             var appointment = await _context.Appointments
                 .Include(a => a.AppointmentDetails)
                 .Include(a => a.Bed)
-                    .ThenInclude(b => b.Room)
-                        .ThenInclude(r => r.RoomType)
+                    .ThenInclude(b => b!.Room)
+                        .ThenInclude(r => r!.RoomType)
                 .FirstOrDefaultAsync(a => a.Id == request.AppointmentId);
 
             // Get Customer ID
@@ -78,9 +78,21 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 TotalAmount = 0
             };
 
+            // 1. Determine Room Type Multiplier
+            decimal multiplier = 1.0m;
+            if (appointment?.Bed?.Room?.RoomType != null)
+            {
+                multiplier = appointment.Bed.Room.RoomType.PriceMultiplier;
+            }
+            else if (request.RoomTypeId.HasValue)
+            {
+                var rt = await _context.RoomTypes.FindAsync(request.RoomTypeId.Value);
+                if (rt != null) multiplier = rt.PriceMultiplier;
+            }
+
             decimal total = 0;
 
-            // 1. Add services from appointment (if any)
+            // 2. Add services from appointment (if any)
             if (appointment != null)
             {
                 foreach (var appDetail in appointment.AppointmentDetails)
@@ -89,14 +101,15 @@ namespace NguyenThiCamTu_2123110472.Controllers
                     {
                         ServiceId = appDetail.ServiceId,
                         Quantity = 1,
-                        Price = appDetail.Price
+                        Price = appDetail.Price * multiplier // Apply multiplier here
                     };
                     order.OrderDetails.Add(od);
                     total += od.Price * od.Quantity;
                 }
+                if (appointment.Status != "Done") appointment.Status = "Done";
             }
 
-            // 2. Add services selected manually
+            // 3. Add services selected manually
             foreach (var sId in request.ServiceIds)
             {
                 var service = await _context.Services.FindAsync(sId);
@@ -106,7 +119,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
                     {
                         ServiceId = service.Id,
                         Quantity = 1,
-                        Price = service.Price
+                        Price = service.Price * multiplier // Apply multiplier here
                     };
                     order.OrderDetails.Add(od);
                     total += od.Price * od.Quantity;
@@ -169,23 +182,6 @@ namespace NguyenThiCamTu_2123110472.Controllers
                         total -= discount;
                     }
                 }
-            }
-
-            // Apply Room Type Multiplier
-            decimal multiplier = 1.0m;
-            if (appointment?.Bed?.Room?.RoomType != null)
-            {
-                multiplier = appointment.Bed.Room.RoomType.PriceMultiplier;
-            }
-            else if (request.RoomTypeId.HasValue)
-            {
-                var rt = await _context.RoomTypes.FindAsync(request.RoomTypeId.Value);
-                if (rt != null) multiplier = rt.PriceMultiplier;
-            }
-
-            if (multiplier != 1.0m)
-            {
-                total *= multiplier;
             }
 
             order.TotalAmount = total;

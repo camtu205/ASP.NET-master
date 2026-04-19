@@ -24,7 +24,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
             foreach (var sId in serviceIds)
             {
                 var service = await _context.Services.FindAsync(sId);
-                if (service != null) totalDuration += service.Duration;
+                if (service != null) totalDuration += service.DurationMinutes;
             }
             return start.AddMinutes(totalDuration + 10);
         }
@@ -38,7 +38,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
             foreach (var detail in details)
             {
                 var service = await _context.Services.FindAsync(detail.ServiceId);
-                if (service != null) totalDuration += service.Duration;
+                if (service != null) totalDuration += service.DurationMinutes;
             }
             return app.AppointmentDate.AddMinutes(totalDuration + 10);
         }
@@ -50,7 +50,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
             return await _context.Appointments
                 .Include(a => a.Customer)
                 .Include(a => a.Staff)
-                .Include(a => a.Bed).ThenInclude(b => b.Room).ThenInclude(r => r.RoomType)
+                .Include(a => a.Bed).ThenInclude(b => b!.Room).ThenInclude(r => r!.RoomType)
                 .Include(a => a.AppointmentDetails).ThenInclude(ad => ad.Service)
                 .OrderByDescending(a => a.AppointmentDate)
                 .ToListAsync();
