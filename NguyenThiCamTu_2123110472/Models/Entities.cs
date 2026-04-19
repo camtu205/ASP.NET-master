@@ -379,6 +379,8 @@ namespace NguyenThiCamTu_2123110472.Models
         [Range(1, int.MaxValue, ErrorMessage = "Thời gian phải lớn hơn 0.")]
         public int DurationPerSession { get; set; } // minutes
  
+        public string? ServiceIds { get; set; } // multi-select services (e.g. ,1,2,3,)
+
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
  
         public ICollection<CustomerTreatment> CustomerTreatments { get; set; } = new List<CustomerTreatment>();

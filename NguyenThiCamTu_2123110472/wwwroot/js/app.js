@@ -205,7 +205,19 @@ async function openCRUDModal(type, id = null) {
     const form = document.getElementById('edit-form');
     const title = document.getElementById('modal-title');
     
-    title.textContent = (isEdit ? 'Chỉnh sửa ' : 'Thêm mới ') + (type === 'customer' ? 'Khách hàng' : type === 'staff' ? 'Nhân viên' : type === 'service' ? 'Dịch vụ' : type === 'product' ? 'Sản phẩm' : 'Khuyến mãi');
+    const typeLabels = {
+        customer: 'Khách hàng',
+        staff: 'Nhân viên',
+        service: 'Dịch vụ',
+        product: 'Sản phẩm',
+        promotion: 'Khuyến mãi',
+        treatment: 'Liệu trình',
+        customerTreatment: 'Liệu trình khách hàng',
+        roomType: 'Loại phòng',
+        room: 'Phòng',
+        bed: 'Giường'
+    };
+    title.textContent = (isEdit ? 'Chỉnh sửa ' : 'Thêm mới ') + (typeLabels[type] || 'thông tin');
     modal.classList.remove('hidden');
     
     let data = { id: '', fullName: '', phoneNumber: '', email: '', position: '', name: '', price: 0, durationMinutes: 60, stockQuantity: 100, discountPercent: 0, totalSessions: 10, durationPerSession: 60, priceMultiplier: 1.0, roomName: '', bedName: '', status: 'Available' };
@@ -270,11 +282,23 @@ async function openCRUDModal(type, id = null) {
             </div>
         `;
     } else if (type === 'treatment') {
+        const services = await apiCall('/Services');
+        const currentServiceIds = data.serviceIds ? data.serviceIds.split(',').filter(x => x) : [];
         html += `
             <div class="input-group"><label>Tên liệu trình</label><input type="text" name="name" value="${data.name}" required></div>
             <div class="input-group"><label>Tổng số buổi</label><input type="number" name="totalSessions" value="${data.totalSessions}" required></div>
             <div class="input-group"><label>Giá trọn gói (VNĐ)</label><input type="number" name="price" value="${data.price}" required></div>
             <div class="input-group"><label>Thời gian/buổi (phút)</label><input type="number" name="duration" value="${data.durationPerSession || 60}" required></div>
+            <div class="input-group"><label>Dịch vụ bao gồm (Chọn nhiều)</label>
+                <div class="checkbox-list">
+                    ${services.map(s => `
+                        <label class="checkbox-item">
+                            <input type="checkbox" name="treatmentServices" value="${s.id}" ${currentServiceIds.includes(s.id.toString()) ? 'checked' : ''}>
+                            ${s.name}
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
         `;
     } else if (type === 'customerTreatment') {
         const [customers, treatments] = await Promise.all([apiCall('/Customers'), apiCall('/Treatments')]);
@@ -327,7 +351,18 @@ async function openCRUDModal(type, id = null) {
                 endDate: fd.get('endDate')
             };
         }
-        if (type === 'treatment') body = {...body, name: fd.get('name'), totalSessions: parseInt(fd.get('totalSessions')), price: parseFloat(fd.get('price')), durationPerSession: parseInt(fd.get('duration'))};
+        if (type === 'treatment') {
+            const selectedServices = fd.getAll('treatmentServices');
+            const serviceIds = selectedServices.length > 0 ? (',' + selectedServices.join(',') + ',') : null;
+            body = { 
+                ...body, 
+                name: fd.get('name'), 
+                totalSessions: parseInt(fd.get('totalSessions')), 
+                price: parseFloat(fd.get('price')), 
+                durationPerSession: parseInt(fd.get('duration')),
+                serviceIds: serviceIds
+            };
+        }
         if (type === 'customerTreatment') body = {...body, customerId: parseInt(fd.get('customerId')), treatmentId: parseInt(fd.get('treatmentId')), status: fd.get('status')};
         if (type === 'roomType') body = {...body, name: fd.get('name'), description: fd.get('desc'), priceMultiplier: parseFloat(fd.get('multiplier'))};
         if (type === 'room') body = {...body, roomName: fd.get('roomName'), roomTypeId: parseInt(fd.get('roomTypeId')), status: fd.get('status')};
@@ -830,11 +865,12 @@ window.showQuickCheckoutModal = async (id) => {
     
     document.getElementById('quick-promo').onchange = (e) => {
         const promo = promos.find(p => p.id == e.target.value);
+        const baseTotal = totalBeforePromo * multiplier;
         if (promo) {
-            const discount = totalBeforePromo * (promo.discountPercent / 100);
-            document.getElementById('label-total').textContent = `${(totalBeforePromo - discount).toLocaleString()}đ (Đã giảm)`;
+            const discount = baseTotal * (promo.discountPercent / 100);
+            document.getElementById('label-total').textContent = `${(baseTotal - discount).toLocaleString()}đ (Đã giảm)`;
         } else {
-            document.getElementById('label-total').textContent = `${totalBeforePromo.toLocaleString()}đ`;
+            document.getElementById('label-total').textContent = `${baseTotal.toLocaleString()}đ`;
         }
     };
 

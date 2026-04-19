@@ -104,6 +104,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
             var appointment = await _context.Appointments
                 .Include(a => a.Customer)
                 .Include(a => a.Staff)
+                .Include(a => a.Bed).ThenInclude(b => b!.Room).ThenInclude(r => r!.RoomType)
                 .Include(a => a.AppointmentDetails)
                     .ThenInclude(ad => ad.Service)
                 .FirstOrDefaultAsync(a => a.Id == id);
