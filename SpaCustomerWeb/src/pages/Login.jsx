@@ -16,7 +16,7 @@ const Login = () => {
     try {
       const data = await login(formData);
       localStorage.setItem('spa_token', data.token);
-      localStorage.setItem('spa_user', JSON.stringify({ username: formData.username }));
+      localStorage.setItem('spa_user', JSON.stringify(data.user));
       navigate('/');
     } catch (err) {
       alert(err.message || 'Login failed. Please check your credentials.');

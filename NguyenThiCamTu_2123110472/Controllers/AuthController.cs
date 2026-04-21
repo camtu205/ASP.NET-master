@@ -28,6 +28,10 @@ namespace NguyenThiCamTu_2123110472.Controllers
             public string Username { get; set; } = string.Empty;
             public string Password { get; set; } = string.Empty;
             public string Role { get; set; } = "Staff"; // Default
+            public string? FullName { get; set; }
+            public string? PhoneNumber { get; set; }
+            public string? Email { get; set; }
+            public string? Address { get; set; }
         }
 
         public class LoginRequest
@@ -48,7 +52,11 @@ namespace NguyenThiCamTu_2123110472.Controllers
             {
                 Username = request.Username,
                 PasswordHash = HashPassword(request.Password),
-                Role = request.Role
+                Role = request.Role,
+                FullName = request.FullName,
+                PhoneNumber = request.PhoneNumber,
+                Email = request.Email,
+                Address = request.Address
             };
 
             _context.Users.Add(user);
@@ -80,7 +88,16 @@ namespace NguyenThiCamTu_2123110472.Controllers
             return Ok(new 
             { 
                 Token = token, 
-                Message = "Login successful" 
+                Message = "Login successful",
+                User = new {
+                    user.Id,
+                    user.Username,
+                    user.Role,
+                    user.FullName,
+                    user.PhoneNumber,
+                    user.Email,
+                    user.Address
+                }
             });
         }
 
