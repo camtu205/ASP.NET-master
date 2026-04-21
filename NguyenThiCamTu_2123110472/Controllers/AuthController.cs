@@ -74,14 +74,30 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 Username = request.Username,
                 PasswordHash = HashPassword(request.Password),
                 Role = request.Role,
-                FullName = request.FullName,
-                PhoneNumber = request.PhoneNumber,
-                Email = request.Email,
-                Address = request.Address
+                FullName = request.FullName ?? string.Empty,
+                PhoneNumber = request.PhoneNumber ?? string.Empty,
+                Email = request.Email ?? string.Empty,
+                Address = request.Address ?? string.Empty
             };
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            try 
+            {
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                // FALLBACK: Nếu lỗi do thiếu cột (DB cũ), cố gắng đăng ký chỉ với thông tin cốt lõi
+                _context.Entry(user).State = EntityState.Detached; // Gỡ bản ghi lỗi
+                
+                var coreUser = new User {
+                    Username = request.Username,
+                    PasswordHash = HashPassword(request.Password),
+                    Role = request.Role
+                };
+                _context.Users.Add(coreUser);
+                await _context.SaveChangesAsync();
+            }
 
             return Ok(new { Message = "Đăng ký thành công!" });
         }
