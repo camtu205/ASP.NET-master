@@ -21,16 +21,16 @@ namespace NguyenThiCamTu_2123110472.Models
         public string Role { get; set; } = "Customer"; // Default to Customer
 
         [MaxLength(100)]
-        public string FullName { get; set; } = string.Empty;
+        public string? FullName { get; set; }
 
         [MaxLength(20)]
-        public string PhoneNumber { get; set; } = string.Empty;
+        public string? PhoneNumber { get; set; }
 
         [MaxLength(100)]
-        public string Email { get; set; } = string.Empty;
+        public string? Email { get; set; }
 
         [MaxLength(200)]
-        public string Address { get; set; } = string.Empty;
+        public string? Address { get; set; }
 
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
     }

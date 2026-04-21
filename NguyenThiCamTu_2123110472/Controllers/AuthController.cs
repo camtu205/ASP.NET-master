@@ -105,7 +105,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
             { 
                 Token = token, 
                 Message = "Login successful",
-                User = new {
+                user = new {
                     user.Id,
                     user.Username,
                     user.Role,
