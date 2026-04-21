@@ -18,12 +18,14 @@ namespace NguyenThiCamTu_2123110472.Controllers
             _context = context;
         }
 
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Service>>> GetServices()
         {
             return await _context.Services.ToListAsync();
         }
 
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<ActionResult<Service>> GetService(int id)
         {
