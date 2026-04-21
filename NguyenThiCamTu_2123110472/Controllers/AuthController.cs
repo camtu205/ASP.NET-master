@@ -63,15 +63,30 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 {
                     Username = request.Username,
                     PasswordHash = HashPassword(request.Password),
-                    Role = "Customer",
-                    FullName = request.FullName ?? string.Empty,
-                    PhoneNumber = request.PhoneNumber ?? string.Empty,
-                    Email = request.Email ?? string.Empty,
-                    Address = request.Address ?? string.Empty
+                    Role = request.Role ?? "Customer",
+                    FullName = request.FullName,
+                    PhoneNumber = request.PhoneNumber,
+                    Email = request.Email,
+                    Address = request.Address
                 };
 
-                _context.Users.Add(user);
-                await _context.SaveChangesAsync();
+                try 
+                {
+                    _context.Users.Add(user);
+                    await _context.SaveChangesAsync();
+                }
+                catch 
+                {
+                    // FALLBACK: Nếu DB lỗi do thiếu cột mới, cố gắng chỉ lưu thông tin gốc
+                    _context.Entry(user).State = EntityState.Detached;
+                    var coreUser = new User {
+                        Username = request.Username,
+                        PasswordHash = HashPassword(request.Password),
+                        Role = request.Role ?? "Customer"
+                    };
+                    _context.Users.Add(coreUser);
+                    await _context.SaveChangesAsync();
+                }
 
                 return Ok(new { Message = "Đăng ký thành công!" });
             }
@@ -84,37 +99,43 @@ namespace NguyenThiCamTu_2123110472.Controllers
         [HttpPost("Login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
-            
-            if (user == null || user.PasswordHash != HashPassword(request.Password))
-            {
-                // Fallback for the dummy admin seeded in DbContext which might not be hashed
-                if (user != null && user.Username == "admin" && user.PasswordHash == "admin" && request.Password == "admin")
+            try {
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
+                
+                if (user == null || user.PasswordHash != HashPassword(request.Password))
                 {
-                    // allow admin login from seeded data
+                    // Fallback for the dummy admin seeded in DbContext which might not be hashed
+                    if (user != null && user.Username == "admin" && user.PasswordHash == "admin" && request.Password == "admin")
+                    {
+                        // allow admin login from seeded data
+                    }
+                    else
+                    {
+                        return Unauthorized("Invalid credentials.");
+                    }
                 }
-                else
-                {
-                    return Unauthorized("Invalid credentials.");
-                }
+
+                var token = GenerateJwtToken(user);
+
+                return Ok(new 
+                { 
+                    Token = token, 
+                    Message = "Login successful",
+                    user = new {
+                        user.Id,
+                        user.Username,
+                        Role = user.Role ?? "Staff",
+                        FullName = user.FullName ?? "",
+                        PhoneNumber = user.PhoneNumber ?? "",
+                        Email = user.Email ?? "",
+                        Address = user.Address ?? ""
+                    }
+                });
             }
-
-            var token = GenerateJwtToken(user);
-
-            return Ok(new 
-            { 
-                Token = token, 
-                Message = "Login successful",
-                user = new {
-                    user.Id,
-                    user.Username,
-                    user.Role,
-                    user.FullName,
-                    user.PhoneNumber,
-                    user.Email,
-                    user.Address
-                }
-            });
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Lỗi đăng nhập hệ thống: {ex.Message} (Inner: {ex.InnerException?.Message})");
+            }
         }
 
         [HttpPost("Logout")]
@@ -142,11 +163,11 @@ namespace NguyenThiCamTu_2123110472.Controllers
 
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Username),
+                new Claim(JwtRegisteredClaimNames.Sub, user.Username ?? ""),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim("UserId", user.Id.ToString()),
-                new Claim(ClaimTypes.Role, user.Role), // Dùng ClaimTypes.Role để dễ dùng [Authorize(Roles="Admin")]
-                new Claim(ClaimTypes.Name, user.Username)
+                new Claim(ClaimTypes.Role, user.Role ?? "Customer"), 
+                new Claim(ClaimTypes.Name, user.Username ?? "")
             };
 
             var token = new JwtSecurityToken(

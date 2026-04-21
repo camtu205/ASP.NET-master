@@ -18,7 +18,7 @@ namespace NguyenThiCamTu_2123110472.Models
 
         [Required]
         [MaxLength(20)]
-        public string Role { get; set; } = "Customer"; // Default to Customer
+        public string Role { get; set; } = "Staff"; // Admin, Staff, Customer
 
         [MaxLength(100)]
         public string? FullName { get; set; }
