@@ -140,6 +140,10 @@ const Booking = () => {
   return (
     <div className="booking-page pt-32 pb-20">
       <div className="container max-w-5xl">
+        <div className="text-center mb-12">
+          <h2 className="text-sm uppercase tracking-[0.3em] text-[#d4af37] font-bold mb-2">Lumina Experience</h2>
+          <h1 className="text-4xl font-serif">Sanctuary Booking <span className="text-[#d4af37] text-lg font-sans ml-2">v2.0 - Premium</span></h1>
+        </div>
         {/* Progress Stepper */}
         <div className="flex justify-between mb-16 relative">
           <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 -translate-y-1/2 z-0" />
