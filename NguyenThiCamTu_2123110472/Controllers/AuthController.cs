@@ -43,63 +43,31 @@ namespace NguyenThiCamTu_2123110472.Controllers
         [HttpPost("Register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
-            // 1. Kiểm tra Username tồn tại
-            if (await _context.Users.AnyAsync(u => u.Username == request.Username))
-            {
-                return BadRequest("Tên đăng nhập đã tồn tại.");
-            }
-
-            // 2. Kiểm tra định dạng SĐT (nếu có)
-            if (!string.IsNullOrEmpty(request.PhoneNumber))
-            {
-                if (!System.Text.RegularExpressions.Regex.IsMatch(request.PhoneNumber, @"^0\d{9}$"))
+            try {
+                // 1. Kiểm tra Username tồn tại
+                if (await _context.Users.AnyAsync(u => u.Username == request.Username))
                 {
-                    return BadRequest("Số điện thoại không hợp lệ (Phải có 10 chữ số và bắt đầu bằng số 0).");
+                    return BadRequest("Tên đăng nhập đã tồn tại.");
                 }
 
-                if (await _context.Users.AnyAsync(u => u.PhoneNumber == request.PhoneNumber))
+                // Tạm thời chỉ lưu thông tin cốt lõi để test lỗi Database
+                var user = new User
                 {
-                    return BadRequest("Số điện thoại này đã được đăng ký.");
-                }
-            }
+                    Username = request.Username,
+                    PasswordHash = HashPassword(request.Password),
+                    Role = "Customer"
+                };
 
-            // 3. Kiểm tra Email tồn tại
-            if (!string.IsNullOrEmpty(request.Email) && await _context.Users.AnyAsync(u => u.Email == request.Email))
-            {
-                return BadRequest("Email này đã được sử dụng.");
-            }
-
-            var user = new User
-            {
-                Username = request.Username,
-                PasswordHash = HashPassword(request.Password),
-                Role = request.Role,
-                FullName = request.FullName ?? string.Empty,
-                PhoneNumber = request.PhoneNumber ?? string.Empty,
-                Email = request.Email ?? string.Empty,
-                Address = request.Address ?? string.Empty
-            };
-
-            try 
-            {
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
+
+                return Ok(new { Message = "Đăng ký thành công! (Bản rút gọn)" });
             }
             catch (Exception ex)
             {
-                // FALLBACK: Nếu lỗi do thiếu cột (DB cũ), cố gắng đăng ký chỉ với thông tin cốt lõi
-                _context.Entry(user).State = EntityState.Detached; // Gỡ bản ghi lỗi
-                
-                var coreUser = new User {
-                    Username = request.Username,
-                    PasswordHash = HashPassword(request.Password),
-                    Role = request.Role
-                };
-                _context.Users.Add(coreUser);
-                await _context.SaveChangesAsync();
+                // Trả về lỗi chi tiết để debug
+                return StatusCode(500, $"Lỗi hệ thống: {ex.Message}");
             }
-
-            return Ok(new { Message = "Đăng ký thành công!" });
         }
 
         [HttpPost("Login")]

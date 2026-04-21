@@ -114,21 +114,6 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
-    
-    // Ép buộc thêm các cột mới nếu chưa có (Dành cho SQLite)
-    var conn = db.Database.GetDbConnection();
-    conn.Open();
-    using (var cmd = conn.CreateCommand())
-    {
-        string[] columns = { "FullName", "PhoneNumber", "Email", "Address" };
-        foreach (var col in columns)
-        {
-            try {
-                cmd.CommandText = $"ALTER TABLE Users ADD COLUMN {col} TEXT";
-                cmd.ExecuteNonQuery();
-            } catch { /* Cột đã tồn tại, bỏ qua */ }
-        }
-    }
 }
 
 app.UseForwardedHeaders();
