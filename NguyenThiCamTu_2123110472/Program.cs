@@ -114,6 +114,23 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
+    
+    // Cưỡng chế vá Database (SQLite)
+    try {
+        var conn = db.Database.GetDbConnection();
+        if (conn.State != System.Data.ConnectionState.Open) conn.Open();
+        using (var cmd = conn.CreateCommand())
+        {
+            string[] columns = { "FullName", "PhoneNumber", "Email", "Address" };
+            foreach (var col in columns)
+            {
+                try {
+                    cmd.CommandText = $"ALTER TABLE Users ADD COLUMN {col} TEXT DEFAULT ''";
+                    cmd.ExecuteNonQuery();
+                } catch { /* Cột đã có, bỏ qua */ }
+            }
+        }
+    } catch { /* Lỗi kết nối, bỏ qua */ }
 }
 
 app.UseForwardedHeaders();

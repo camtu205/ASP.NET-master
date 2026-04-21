@@ -50,23 +50,34 @@ namespace NguyenThiCamTu_2123110472.Controllers
                     return BadRequest("Tên đăng nhập đã tồn tại.");
                 }
 
-                // Tạm thời chỉ lưu thông tin cốt lõi để test lỗi Database
+                // 2. Kiểm tra định dạng SĐT (nếu có)
+                if (!string.IsNullOrEmpty(request.PhoneNumber))
+                {
+                    if (!System.Text.RegularExpressions.Regex.IsMatch(request.PhoneNumber, @"^0\d{9}$"))
+                    {
+                        return BadRequest("Số điện thoại không hợp lệ (Phải có 10 chữ số và bắt đầu bằng số 0).");
+                    }
+                }
+
                 var user = new User
                 {
                     Username = request.Username,
                     PasswordHash = HashPassword(request.Password),
-                    Role = "Customer"
+                    Role = "Customer",
+                    FullName = request.FullName ?? string.Empty,
+                    PhoneNumber = request.PhoneNumber ?? string.Empty,
+                    Email = request.Email ?? string.Empty,
+                    Address = request.Address ?? string.Empty
                 };
 
                 _context.Users.Add(user);
                 await _context.SaveChangesAsync();
 
-                return Ok(new { Message = "Đăng ký thành công! (Bản rút gọn)" });
+                return Ok(new { Message = "Đăng ký thành công!" });
             }
             catch (Exception ex)
             {
-                // Trả về lỗi chi tiết để debug
-                return StatusCode(500, $"Lỗi hệ thống: {ex.Message}");
+                return StatusCode(500, $"Lỗi hệ thống khi lưu: {ex.Message} (Inner: {ex.InnerException?.Message})");
             }
         }
 
