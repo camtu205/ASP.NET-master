@@ -19,6 +19,14 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Frontend validation
+    const phoneRegex = /^0\d{9}$/;
+    if (!phoneRegex.test(formData.phoneNumber)) {
+      alert("Số điện thoại không hợp lệ! Phải có 10 chữ số và bắt đầu bằng số 0.");
+      return;
+    }
+
     setLoading(true);
 
     try {
