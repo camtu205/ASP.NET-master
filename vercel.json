@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/SpaCustomerWeb/index.html"
+    }
+  ]
+}
