@@ -14,9 +14,11 @@ namespace NguyenThiCamTu_2123110472.Controllers
         private readonly AppDbContext _context;
         public RoomTypesController(AppDbContext context) { _context = context; }
 
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<RoomType>>> GetRoomTypes() => await _context.RoomTypes.ToListAsync();
 
+        [AllowAnonymous]
         [HttpGet("{id}")]
         public async Task<ActionResult<RoomType>> GetRoomType(int id)
         {

@@ -33,7 +33,9 @@ export const register = (userData) => apiFetch('/Auth/Register', {
 
 export const getServices = () => apiFetch('/Services');
 export const getProducts = () => apiFetch('/Product');
-export const bookAppointment = (data) => apiFetch('/Appointments', {
+export const getStaffs = () => apiFetch('/Staffs');
+export const getRoomTypes = () => apiFetch('/RoomTypes');
+export const bookAppointment = (data) => apiFetch('/Appointments/Book', {
   method: 'POST',
   body: JSON.stringify(data),
 });
