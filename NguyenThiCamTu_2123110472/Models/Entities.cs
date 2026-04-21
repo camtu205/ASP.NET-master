@@ -20,15 +20,19 @@ namespace NguyenThiCamTu_2123110472.Models
         [MaxLength(20)]
         public string Role { get; set; } = "Staff"; // Admin, Staff, Customer
 
+        [NotMapped]
         [MaxLength(100)]
         public string? FullName { get; set; }
 
+        [NotMapped]
         [MaxLength(20)]
         public string? PhoneNumber { get; set; }
 
+        [NotMapped]
         [MaxLength(100)]
         public string? Email { get; set; }
 
+        [NotMapped]
         [MaxLength(200)]
         public string? Address { get; set; }
 
