@@ -12,7 +12,8 @@ import {
   Star,
   Plus,
   Trash2,
-  Info
+  Info,
+  ArrowRight
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getServices, getStaffs, getRoomTypes, getProducts, bookAppointment } from '../services/api';
