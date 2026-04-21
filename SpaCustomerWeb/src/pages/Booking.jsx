@@ -95,6 +95,13 @@ const Booking = () => {
   };
 
   const handleBooking = async () => {
+    const token = localStorage.getItem('spa_token');
+    if (!token) {
+      alert("Please login to book an appointment.");
+      navigate('/login', { state: { from: '/booking' } });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const savedUser = localStorage.getItem('spa_user');
