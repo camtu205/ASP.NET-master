@@ -8,7 +8,8 @@ export const apiFetch = async (endpoint, options = {}) => {
     ...options.headers,
   };
 
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
+  const url = `${BASE_URL}${endpoint}${endpoint.includes('?') ? '&' : '?'}_t=${new Date().getTime()}`;
+  const response = await fetch(url, {
     ...options,
     headers,
   });
