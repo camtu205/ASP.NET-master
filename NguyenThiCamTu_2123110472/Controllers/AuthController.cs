@@ -43,9 +43,30 @@ namespace NguyenThiCamTu_2123110472.Controllers
         [HttpPost("Register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
+            // 1. Kiểm tra Username tồn tại
             if (await _context.Users.AnyAsync(u => u.Username == request.Username))
             {
-                return BadRequest("Username already exists.");
+                return BadRequest("Tên đăng nhập đã tồn tại.");
+            }
+
+            // 2. Kiểm tra định dạng SĐT (nếu có)
+            if (!string.IsNullOrEmpty(request.PhoneNumber))
+            {
+                if (!System.Text.RegularExpressions.Regex.IsMatch(request.PhoneNumber, @"^0\d{9}$"))
+                {
+                    return BadRequest("Số điện thoại không hợp lệ (Phải có 10 chữ số và bắt đầu bằng số 0).");
+                }
+
+                if (await _context.Users.AnyAsync(u => u.PhoneNumber == request.PhoneNumber))
+                {
+                    return BadRequest("Số điện thoại này đã được đăng ký.");
+                }
+            }
+
+            // 3. Kiểm tra Email tồn tại
+            if (!string.IsNullOrEmpty(request.Email) && await _context.Users.AnyAsync(u => u.Email == request.Email))
+            {
+                return BadRequest("Email này đã được sử dụng.");
             }
 
             var user = new User
@@ -62,7 +83,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            return Ok(new { Message = "User registered successfully" });
+            return Ok(new { Message = "Đăng ký thành công!" });
         }
 
         [HttpPost("Login")]
