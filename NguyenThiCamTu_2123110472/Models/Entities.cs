@@ -173,7 +173,6 @@ namespace NguyenThiCamTu_2123110472.Models
         public Bed? Bed { get; set; }
 
         public decimal TotalPrice { get; set; }
-        public string Status { get; set; } = "Pending"; // Pending, Assigned, Done, Cancelled
         public bool IsPrepaid { get; set; } = false;
         public decimal PrepaidAmount { get; set; } = 0;
         public ICollection<AppointmentDetail> AppointmentDetails { get; set; } = new List<AppointmentDetail>();
