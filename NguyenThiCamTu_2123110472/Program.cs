@@ -109,29 +109,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
-// Tự động cập nhật Database cấu trúc mới nhất
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
-    
-    // Cưỡng chế vá Database (SQLite)
-    try {
-        var conn = db.Database.GetDbConnection();
-        if (conn.State != System.Data.ConnectionState.Open) conn.Open();
-        using (var cmd = conn.CreateCommand())
-        {
-            string[] columns = { "FullName", "PhoneNumber", "Email", "Address" };
-            foreach (var col in columns)
-            {
-                try {
-                    cmd.CommandText = $"ALTER TABLE Users ADD COLUMN {col} TEXT DEFAULT ''";
-                    cmd.ExecuteNonQuery();
-                } catch { /* Cột đã có, bỏ qua */ }
-            }
-        }
-    } catch { /* Lỗi kết nối, bỏ qua */ }
-}
+// Cấu hình Database ban đầu (đã chuyển sang đoạn Migration bên dưới)
+
 
 app.UseForwardedHeaders();
 
@@ -170,6 +149,12 @@ using (var scope = app.Services.CreateScope())
             context.Database.ExecuteSqlRaw("ALTER TABLE \"Promotions\" ADD COLUMN IF NOT EXISTS \"ApplicableServiceIds\" TEXT;");
             context.Database.ExecuteSqlRaw("ALTER TABLE \"Treatments\" ADD COLUMN IF NOT EXISTS \"ServiceIds\" TEXT;");
             context.Database.ExecuteSqlRaw("ALTER TABLE \"Customers\" ADD COLUMN IF NOT EXISTS \"Username\" TEXT;");
+            
+            // Vá bảng Users
+            context.Database.ExecuteSqlRaw("ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"FullName\" TEXT;");
+            context.Database.ExecuteSqlRaw("ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"PhoneNumber\" TEXT;");
+            context.Database.ExecuteSqlRaw("ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"Email\" TEXT;");
+            context.Database.ExecuteSqlRaw("ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"Address\" TEXT;");
         } catch { /* Bỏ qua nếu đã có hoặc lỗi syntax (DB khác Postgres) */ }
 
         app.Logger.LogInformation(">>> DATABASE MIGRATION SUCCESSFUL! <<<");
