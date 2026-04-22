@@ -145,25 +145,33 @@ using (var scope = app.Services.CreateScope())
         context.Database.Migrate();
         
         // Tự động cập nhật Schema cho bảng Promotions nếu thiếu cột
-        try {
-            context.Database.ExecuteSqlRaw("ALTER TABLE \"Promotions\" ADD COLUMN IF NOT EXISTS \"MaxUsage\" INTEGER;");
-            context.Database.ExecuteSqlRaw("ALTER TABLE \"Promotions\" ADD COLUMN IF NOT EXISTS \"ApplicableServiceIds\" TEXT;");
-            context.Database.ExecuteSqlRaw("ALTER TABLE \"Treatments\" ADD COLUMN IF NOT EXISTS \"ServiceIds\" TEXT;");
-            context.Database.ExecuteSqlRaw("ALTER TABLE \"Customers\" ADD COLUMN IF NOT EXISTS \"Username\" TEXT;");
-            context.Database.ExecuteSqlRaw("ALTER TABLE \"Customers\" ADD COLUMN IF NOT EXISTS \"Rank\" TEXT DEFAULT 'Standard';");
-            context.Database.ExecuteSqlRaw("ALTER TABLE \"Appointments\" ADD COLUMN IF NOT EXISTS \"IsPrepaid\" BOOLEAN DEFAULT FALSE;");
-            context.Database.ExecuteSqlRaw("ALTER TABLE \"Appointments\" ADD COLUMN IF NOT EXISTS \"PrepaidAmount\" DECIMAL DEFAULT 0;");
-            
-            // Vá bảng Reviews (Thêm AppointmentId và cho phép ServiceId null)
-            context.Database.ExecuteSqlRaw("ALTER TABLE \"Reviews\" ADD COLUMN IF NOT EXISTS \"AppointmentId\" INTEGER;");
-            context.Database.ExecuteSqlRaw("ALTER TABLE \"Reviews\" ALTER COLUMN \"ServiceId\" DROP NOT NULL;");
+        string[] patches = {
+            "ALTER TABLE \"Promotions\" ADD COLUMN \"MaxUsage\" INTEGER;",
+            "ALTER TABLE \"Promotions\" ADD COLUMN \"ApplicableServiceIds\" TEXT;",
+            "ALTER TABLE \"Treatments\" ADD COLUMN \"ServiceIds\" TEXT;",
+            "ALTER TABLE \"Customers\" ADD COLUMN \"Username\" TEXT;",
+            "ALTER TABLE \"Customers\" ADD COLUMN \"Rank\" TEXT DEFAULT 'Standard';",
+            "ALTER TABLE \"Appointments\" ADD COLUMN \"IsPrepaid\" BOOLEAN DEFAULT FALSE;",
+            "ALTER TABLE \"Appointments\" ADD COLUMN \"PrepaidAmount\" DECIMAL DEFAULT 0;",
+            "ALTER TABLE \"Reviews\" ADD COLUMN \"AppointmentId\" INTEGER;",
+            "ALTER TABLE \"Reviews\" ALTER COLUMN \"ServiceId\" DROP NOT NULL;",
+            "ALTER TABLE \"Users\" ADD COLUMN \"FullName\" TEXT;",
+            "ALTER TABLE \"Users\" ADD COLUMN \"PhoneNumber\" TEXT;",
+            "ALTER TABLE \"Users\" ADD COLUMN \"Email\" TEXT;",
+            "ALTER TABLE \"Users\" ADD COLUMN \"Address\" TEXT;"
+        };
 
-            // Vá bảng Users
-            context.Database.ExecuteSqlRaw("ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"FullName\" TEXT;");
-            context.Database.ExecuteSqlRaw("ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"PhoneNumber\" TEXT;");
-            context.Database.ExecuteSqlRaw("ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"Email\" TEXT;");
-            context.Database.ExecuteSqlRaw("ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"Address\" TEXT;");
-        } catch { /* Bỏ qua nếu đã có hoặc lỗi syntax (DB khác Postgres) */ }
+        foreach (var patch in patches) {
+            try { 
+                // Thử chạy cả bản có IF NOT EXISTS và không có tùy theo DB
+                var finalPatch = patch.Replace("ADD COLUMN", "ADD COLUMN IF NOT EXISTS");
+                context.Database.ExecuteSqlRaw(finalPatch); 
+            } 
+            catch { 
+                try { context.Database.ExecuteSqlRaw(patch); } catch { /* Ignore if already exists */ }
+            }
+        }
+
 
         app.Logger.LogInformation(">>> DATABASE MIGRATION SUCCESSFUL! <<<");
     }
