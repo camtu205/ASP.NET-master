@@ -9,6 +9,7 @@ import BookingHistory from './pages/BookingHistory';
 import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import PaymentStatus from './pages/PaymentStatus';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/payment-status" element={<PaymentStatus />} />
           </Routes>
         </main>
         <footer style={{ padding: '40px 5%', textAlign: 'center', backgroundColor: 'var(--primary)', color: 'white' }}>
