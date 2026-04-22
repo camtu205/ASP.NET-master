@@ -400,7 +400,7 @@ const renderers = {
         
         // Quyết định ai được quyền Thêm/Sửa/Xóa dựa trên yêu cầu:
         // "nhân viên không được thêm nhân viên, chỉ admin được xóa hóa đơn"
-        const canManage = isAdmin || (isStaff && type !== 'staff');
+        const canManage = isAdmin || (isStaff && ['appointment', 'checkout', 'customerTreatment'].includes(type));
         
         document.getElementById('section-container').innerHTML = `
             <div class="table-controls">
@@ -665,29 +665,32 @@ const renderers = {
 
     roomTypes: async () => {
         const data = await apiCall('/RoomTypes');
-        document.getElementById('section-container').innerHTML = `
-            <div class="header-row"><h3>Danh mục loại phòng</h3> <button class="btn-primary" onclick="addItem('roomType')">+ Thêm loại phòng</button></div>
-            <table><thead><tr><th>Loại phòng</th><th>Hệ số giá</th><th>Mô tả</th><th style="text-align:right">Thao tác</th></tr></thead>
+        const isAdmin = state.user?.role === 'Admin';
+            document.getElementById('section-container').innerHTML = `
+            <div class="header-row"><h3>Danh mục loại phòng</h3> ${isAdmin ? '<button class="btn-primary" onclick="addItem(\'roomType\')">+ Thêm loại phòng</button>' : ''}</div>
+            <table><thead><tr><th>Loại phòng</th><th>Hệ số giá</th><th>Mô tả</th>${isAdmin ? '<th style="text-align:right">Thao tác</th>' : ''}</tr></thead>
             <tbody>${data.map(i => `<tr><td><strong>${i.name}</strong></td><td><span class="badge badge-assigned">x${i.priceMultiplier}</span></td><td>${i.description || ''}</td>
-            <td style="text-align:right"><button class="btn-edit" onclick="openEditModal('roomType', ${i.id})">Sửa</button> <button class="btn-danger" onclick="deleteItem('/RoomTypes', ${i.id}, '${i.name}')">Xóa</button></td></tr>`).join('')}</tbody></table>`;
+            ${isAdmin ? `<td style="text-align:right"><button class="btn-edit" onclick="openEditModal('roomType', ${i.id})">Sửa</button> <button class="btn-danger" onclick="deleteItem('/RoomTypes', ${i.id}, '${i.name}')">Xóa</button></td>` : ''}</tr>`).join('')}</tbody></table>`;
     },
 
     rooms: async () => {
         const data = await apiCall('/Rooms');
+        const isAdmin = state.user?.role === 'Admin';
         document.getElementById('section-container').innerHTML = `
-            <div class="header-row"><h3>Quản lý Phòng</h3> <button class="btn-primary" onclick="addItem('room')">+ Thêm phòng</button></div>
-            <table><thead><tr><th>Tên phòng</th><th>Loại phòng</th><th>Trạng thái</th><th style="text-align:right">Thao tác</th></tr></thead>
+            <div class="header-row"><h3>Quản lý Phòng</h3> ${isAdmin ? '<button class="btn-primary" onclick="addItem(\'room\')">+ Thêm phòng</button>' : ''}</div>
+            <table><thead><tr><th>Tên phòng</th><th>Loại phòng</th><th>Trạng thái</th>${isAdmin ? '<th style="text-align:right">Thao tác</th>' : ''}</tr></thead>
             <tbody>${data.map(i => `<tr><td><strong>${i.roomName}</strong></td><td>${i.roomType?.name || 'N/A'}</td><td><span class="badge badge-${i.status.toLowerCase()}">${i.status}</span></td>
-            <td style="text-align:right"><button class="btn-edit" onclick="openEditModal('room', ${i.id})">Sửa</button> <button class="btn-danger" onclick="deleteItem('/Rooms', ${i.id}, '${i.roomName}')">Xóa</button></td></tr>`).join('')}</tbody></table>`;
+            ${isAdmin ? `<td style="text-align:right"><button class="btn-edit" onclick="openEditModal('room', ${i.id})">Sửa</button> <button class="btn-danger" onclick="deleteItem('/Rooms', ${i.id}, '${i.roomName}')">Xóa</button></td>` : ''}</tr>`).join('')}</tbody></table>`;
     },
 
     beds: async () => {
         const data = await apiCall('/Beds');
+        const isAdmin = state.user?.role === 'Admin';
         document.getElementById('section-container').innerHTML = `
-            <div class="header-row"><h3>Quản lý Giường</h3> <button class="btn-primary" onclick="addItem('bed')">+ Thêm giường</button></div>
-            <table><thead><tr><th>Tên giường</th><th>Phòng</th><th>Loại phòng</th><th>Trạng thái</th><th style="text-align:right">Thao tác</th></tr></thead>
+            <div class="header-row"><h3>Quản lý Giường</h3> ${isAdmin ? '<button class="btn-primary" onclick="addItem(\'bed\')">+ Thêm giường</button>' : ''}</div>
+            <table><thead><tr><th>Tên giường</th><th>Phòng</th><th>Loại phòng</th><th>Trạng thái</th>${isAdmin ? '<th style="text-align:right">Thao tác</th>' : ''}</tr></thead>
             <tbody>${data.map(i => `<tr><td><strong>${i.bedName}</strong></td><td>${i.room?.roomName || 'N/A'}</td><td>${i.room?.roomType?.name || 'N/A'}</td><td><span class="badge badge-${i.status.toLowerCase()}">${i.status}</span></td>
-            <td style="text-align:right"><button class="btn-edit" onclick="openEditModal('bed', ${i.id})">Sửa</button> <button class="btn-danger" onclick="deleteItem('/Beds', ${i.id}, '${i.bedName}')">Xóa</button></td></tr>`).join('')}</tbody></table>`;
+            ${isAdmin ? `<td style="text-align:right"><button class="btn-edit" onclick="openEditModal('bed', ${i.id})">Sửa</button> <button class="btn-danger" onclick="deleteItem('/Beds', ${i.id}, '${i.bedName}')">Xóa</button></td>` : ''}</tr>`).join('')}</tbody></table>`;
     }
 };
 
@@ -906,6 +909,11 @@ async function initApp() {
     document.getElementById('user-avatar').textContent = state.user.username.substring(0, 2).toUpperCase();
 
     document.querySelectorAll('.nav-item').forEach(item => {
+        const section = item.getAttribute('data-section');
+        if (state.user.role === 'Staff' && section === 'audit') {
+            item.style.display = 'none';
+        }
+
         item.onclick = (e) => {
             e.preventDefault();
             document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));

@@ -33,6 +33,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<Promotion>> PostPromotion(Promotion promotion)
         {
             _context.Promotions.Add(promotion);
@@ -41,6 +42,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutPromotion(int id, Promotion promotion)
         {
             if (id != promotion.Id) return BadRequest();
@@ -50,6 +52,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeletePromotion(int id)
         {
             var promotion = await _context.Promotions.FindAsync(id);

@@ -33,6 +33,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ServiceCategory>> PostServiceCategory(ServiceCategory category)
         {
             _context.ServiceCategories.Add(category);
@@ -41,6 +42,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutServiceCategory(int id, ServiceCategory category)
         {
             if (id != category.Id) return BadRequest();
@@ -50,6 +52,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteServiceCategory(int id)
         {
             var category = await _context.ServiceCategories.FindAsync(id);

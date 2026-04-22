@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NguyenThiCamTu_2123110472.Data;
@@ -31,6 +32,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<Treatment>> PostTreatment(Treatment treatment)
         {
             _context.Treatments.Add(treatment);
@@ -39,6 +41,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutTreatment(int id, Treatment treatment)
         {
             if (id != treatment.Id) return BadRequest();
@@ -49,6 +52,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteTreatment(int id)
         {
             var treatment = await _context.Treatments.FindAsync(id);

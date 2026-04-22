@@ -35,6 +35,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<Service>> PostService(Service service)
         {
             _context.Services.Add(service);
@@ -43,6 +44,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         }
 
         [HttpPut("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> PutService(int id, Service service)
         {
             if (id != service.Id) return BadRequest();
@@ -62,6 +64,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         }
 
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteService(int id)
         {
             var service = await _context.Services.FindAsync(id);
