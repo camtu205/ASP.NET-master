@@ -150,6 +150,10 @@ using (var scope = app.Services.CreateScope())
             context.Database.ExecuteSqlRaw("ALTER TABLE \"Treatments\" ADD COLUMN IF NOT EXISTS \"ServiceIds\" TEXT;");
             context.Database.ExecuteSqlRaw("ALTER TABLE \"Customers\" ADD COLUMN IF NOT EXISTS \"Username\" TEXT;");
             
+            // Vá bảng Reviews (Thêm AppointmentId và cho phép ServiceId null)
+            context.Database.ExecuteSqlRaw("ALTER TABLE \"Reviews\" ADD COLUMN IF NOT EXISTS \"AppointmentId\" INTEGER;");
+            context.Database.ExecuteSqlRaw("ALTER TABLE \"Reviews\" ALTER COLUMN \"ServiceId\" DROP NOT NULL;");
+
             // Vá bảng Users
             context.Database.ExecuteSqlRaw("ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"FullName\" TEXT;");
             context.Database.ExecuteSqlRaw("ALTER TABLE \"Users\" ADD COLUMN IF NOT EXISTS \"PhoneNumber\" TEXT;");
