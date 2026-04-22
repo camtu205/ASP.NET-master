@@ -78,6 +78,28 @@ const Booking = () => {
     setStep(step + 1);
   };
 
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [sData, stData, rtData, pData] = await Promise.all([
+          getServices(),
+          getStaffs(),
+          getRoomTypes(),
+          getProducts()
+        ]);
+        setServices(sData);
+        setStaffs(stData);
+        setRoomTypes(rtData);
+        setProducts(pData.slice(0, 4));
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   const handleBooking = async () => {
     const checkbox = document.getElementById('agree-checkbox');
     if (checkbox && !checkbox.checked) {
@@ -130,6 +152,9 @@ const Booking = () => {
     });
   };
 
+  const totalServiceDuration = selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
+  const basePrice = selectedServices.reduce((sum, s) => sum + Number(s.price), 0);
+  const roomMultiplier = selectedRoomType ? Number(selectedRoomType.priceMultiplier) : 1;
   const totalPrice = (basePrice * roomMultiplier) + selectedProducts.reduce((sum, p) => sum + (Number(p.price) * (p.quantity || 1)), 0);
 
   if (loading) return (
