@@ -79,9 +79,13 @@ async function apiCall(endpoint, method = 'GET', body = null, retries = 2) {
 }
 
 // --- Auth ---
+let isSubmitting = false;
 async function handleLogin(e) {
     if (e) e.preventDefault();
+    if (isSubmitting) return;
+    
     console.log('--- LOGIN START ---');
+    isSubmitting = true;
     try {
         const username = document.getElementById('username')?.value;
         const password = document.getElementById('password')?.value;
@@ -89,21 +93,33 @@ async function handleLogin(e) {
         console.log('Username:', username);
         if (!username || !password) {
             showToast('Vui lòng nhập đầy đủ thông tin', 'error');
+            isSubmitting = false;
             return;
         }
 
         console.log('Sending request to:', `${API_BASE}/Auth/Login`);
         const result = await apiCall('/Auth/Login', 'POST', { username, password });
-        console.log('Login Result:', result);
+        console.log('Login Result Keys:', Object.keys(result));
 
-        state.token = result.Token;
+        state.token = result.token || result.Token;
+        
+        if (!state.token) {
+            console.error('SERVER RESPONSE ERROR: No token field found');
+            showToast('Lỗi: Server không trả về Token', 'error');
+            isSubmitting = false;
+            return;
+        }
+
         localStorage.setItem('crm_token', state.token);
-        console.log('Token saved, initializing app...');
+        console.log('Token saved, switching UI...');
+        
         await initApp();
     } catch (err) {
         console.error('CRITICAL LOGIN ERROR:', err);
         alert('Lỗi đăng nhập: ' + err.message);
         showToast(err.message || 'Lỗi đăng nhập', 'error');
+    } finally {
+        isSubmitting = false;
     }
 }
 
