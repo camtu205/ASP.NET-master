@@ -26,7 +26,9 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 return await _context.Reviews
                     .Include(r => r.Customer)
                     .Include(r => r.Service)
-                    .Include(r => r.Appointment).ThenInclude(a => a != null ? a.AppointmentDetails : null).ThenInclude(ad => ad != null ? ad.Service : null)
+                    .Include(r => r.Appointment)
+                        .ThenInclude(a => a!.AppointmentDetails)
+                        .ThenInclude(ad => ad.Service)
                     .OrderByDescending(r => r.CreatedAt)
                     .ToListAsync();
             }
