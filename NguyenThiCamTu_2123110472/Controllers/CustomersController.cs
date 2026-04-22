@@ -32,6 +32,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
             var customer = await _context.Customers
                                          .Include(c => c.Appointments)
                                          .Include(c => c.Orders)
+                                         .Include(c => c.LoyaltyPoint)
                                          .FirstOrDefaultAsync(c => c.Id == id);
 
             if (customer == null)
