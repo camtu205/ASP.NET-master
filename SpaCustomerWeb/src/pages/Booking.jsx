@@ -31,13 +31,13 @@ const Booking = () => {
   const navigate = useNavigate();
   const editApp = location.state?.edit || null;
   const isEdit = !!editApp;
+  const initialServices = location.state?.selectedServices || [];
 
   const [step, setStep] = useState(1);
   const [services, setServices] = useState([]);
   const [staffs, setStaffs] = useState([]);
   const [roomTypes, setRoomTypes] = useState([]);
   const [products, setProducts] = useState([]);
-  
   const [selectedServices, setSelectedServices] = useState(initialServices);
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [selectedRoomType, setSelectedRoomType] = useState(null);
