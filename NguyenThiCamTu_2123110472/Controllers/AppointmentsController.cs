@@ -307,9 +307,6 @@ namespace NguyenThiCamTu_2123110472.Controllers
             }
  
             // 1. Kiểm tra điều kiện: không được sửa khi còn dưới 30 phút
-            if (appointment.AppointmentDate < DateTime.Now.AddMinutes(30))ll) return NotFound();
-
-            // 1. Kiểm tra điều kiện: không được sửa khi còn dưới 30 phút
             if (appointment.AppointmentDate < DateTime.Now.AddMinutes(30))
             {
                 return BadRequest("Không thể chỉnh sửa lịch hẹn khi còn dưới 30 phút tới giờ hẹn.");
