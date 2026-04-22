@@ -94,7 +94,7 @@ namespace NguyenThiCamTu_2123110472.Services
 
     public class VnPayCompare : IComparer<string>
     {
-        public int Compare(string x, string y)
+        public int Compare(string? x, string? y)
         {
             if (x == y) return 0;
             if (x == null) return -1;
