@@ -293,6 +293,10 @@ namespace NguyenThiCamTu_2123110472.Models
         [ForeignKey("ServiceId")]
         public Service? Service { get; set; }
 
+        public int? AppointmentId { get; set; }
+        [ForeignKey("AppointmentId")]
+        public Appointment? Appointment { get; set; }
+
         public int Rating { get; set; } // e.g., 1 to 5
 
         public string Comment { get; set; } = string.Empty;

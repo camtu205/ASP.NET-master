@@ -25,6 +25,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
             return await _context.Reviews
                 .Include(r => r.Customer)
                 .Include(r => r.Service)
+                .Include(r => r.Appointment).ThenInclude(a => a.AppointmentDetails).ThenInclude(ad => ad.Service)
                 .OrderByDescending(r => r.CreatedAt)
                 .ToListAsync();
         }
@@ -33,7 +34,11 @@ namespace NguyenThiCamTu_2123110472.Controllers
         [HttpGet("Service/{serviceId}")]
         public async Task<ActionResult<IEnumerable<Review>>> GetServiceReviews(int serviceId)
         {
-            return await _context.Reviews.Where(r => r.ServiceId == serviceId).Include(r => r.Customer).ToListAsync();
+            return await _context.Reviews
+                .Where(r => r.ServiceId == serviceId)
+                .Include(r => r.Customer)
+                .Include(r => r.Appointment)
+                .ToListAsync();
         }
 
         [HttpPost]

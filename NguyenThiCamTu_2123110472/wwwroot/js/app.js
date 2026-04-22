@@ -661,13 +661,22 @@ const renderers = {
         const revs = await apiCall('/Reviews');
         document.getElementById('section-container').innerHTML = `
             <div class="header-row"><h3>Phản hồi từ khách hàng</h3></div>
-            <table><thead><tr><th>Khách hàng</th><th>Dịch vụ</th><th>Đánh giá</th><th>Nội dung</th><th>Ngày</th><th style="text-align:right">Thao tác</th></tr></thead>
+            <table><thead><tr><th>Khách hàng</th><th>Dịch vụ</th><th>Lịch hẹn</th><th>Đánh giá</th><th>Nội dung</th><th>Ngày</th><th style="text-align:right">Thao tác</th></tr></thead>
             <tbody>${revs.map(r => `
                 <tr>
                     <td><strong>${r.customer?.fullName || 'Khách vãng lai'}</strong></td>
                     <td>${r.service?.name || '<em style="color:#94a3b8">Toàn bộ trải nghiệm</em>'}</td>
+                    <td>
+                        ${r.appointment ? `
+                            <div style="font-size:0.8rem">
+                                <strong>#${r.appointmentId}</strong><br>
+                                ${new Date(r.appointment.appointmentDate).toLocaleString()}<br>
+                                <small>${r.appointment.appointmentDetails?.map(d => d.service?.name).join(', ') || ''}</small>
+                            </div>
+                        ` : '<em style="color:#94a3b8">N/A</em>'}
+                    </td>
                     <td style="color:#d4af37">${'⭐'.repeat(r.rating)}</td>
-                    <td><div style="max-width:300px; font-size:0.9rem; line-height:1.4">${r.comment}</div></td>
+                    <td><div style="max-width:250px; font-size:0.9rem; line-height:1.4">${r.comment}</div></td>
                     <td>${new Date(r.createdAt || Date.now()).toLocaleDateString('vi-VN')}</td>
                     <td style="text-align:right">
                         <button class="btn-danger" onclick="deleteItem('/Reviews', ${r.id}, 'Đánh giá của ${r.customer?.fullName || 'Khách'}')"><i class="fas fa-trash"></i></button>

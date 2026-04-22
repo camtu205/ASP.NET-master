@@ -70,6 +70,7 @@ const BookingHistory = () => {
     try {
       await submitReview({
         customerId: parseInt(customerId),
+        appointmentId: reviewModal.id,
         serviceId: reviewModal.appointmentDetails[0]?.serviceId || null,
         rating: rating,
         comment: comment,
