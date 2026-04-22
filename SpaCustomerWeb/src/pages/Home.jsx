@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Leaf, Sparkles, Wind, ArrowRight } from 'lucide-react';
+import { Leaf, Sparkles, Wind, ArrowRight, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Home = () => {
