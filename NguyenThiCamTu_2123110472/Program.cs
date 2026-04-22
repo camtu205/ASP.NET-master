@@ -169,6 +169,7 @@ using (var scope = app.Services.CreateScope())
             context.Database.ExecuteSqlRaw("ALTER TABLE \"Promotions\" ADD COLUMN IF NOT EXISTS \"MaxUsage\" INTEGER;");
             context.Database.ExecuteSqlRaw("ALTER TABLE \"Promotions\" ADD COLUMN IF NOT EXISTS \"ApplicableServiceIds\" TEXT;");
             context.Database.ExecuteSqlRaw("ALTER TABLE \"Treatments\" ADD COLUMN IF NOT EXISTS \"ServiceIds\" TEXT;");
+            context.Database.ExecuteSqlRaw("ALTER TABLE \"Customers\" ADD COLUMN IF NOT EXISTS \"Username\" TEXT;");
         } catch { /* Bỏ qua nếu đã có hoặc lỗi syntax (DB khác Postgres) */ }
 
         app.Logger.LogInformation(">>> DATABASE MIGRATION SUCCESSFUL! <<<");

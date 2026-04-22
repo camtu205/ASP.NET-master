@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Phone, MapPin, ArrowRight, Loader2, Info, ChevronLeft } from 'lucide-react';
+import { Mail, Lock, User, Phone, MapPin, ArrowRight, Loader2, Info, ChevronLeft, CheckCircle } from 'lucide-react';
 import { register } from '../services/api';
 
 const Register = () => {
@@ -15,6 +15,7 @@ const Register = () => {
     role: 'Customer' 
   });
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -31,8 +32,11 @@ const Register = () => {
 
     try {
       await register(formData);
-      alert('Registration successful! Please login.');
-      navigate('/login');
+      setShowSuccess(true);
+      // Wait a bit to show the beautiful modal before redirecting
+      setTimeout(() => {
+        navigate('/login');
+      }, 3500);
     } catch (err) {
       alert(err.message || 'Registration failed. Please check your data.');
     } finally {
@@ -155,6 +159,43 @@ const Register = () => {
           Already an explorer of peace? <Link to="/login" className="text-[#064e3b] font-bold hover:underline">Login here</Link>
         </p>
       </motion.div>
+
+      {/* Success Modal Overlay */}
+      <AnimatePresence>
+        {showSuccess && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-[#064e3b]/20 backdrop-blur-md px-6"
+          >
+            <motion.div 
+              initial={{ scale: 0.8, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              className="bg-white p-12 rounded-[3.5rem] shadow-2xl max-w-sm w-full text-center border border-white"
+            >
+              <div className="w-24 h-24 bg-[#064e3b]/10 rounded-full flex items-center justify-center mx-auto mb-8">
+                <CheckCircle className="text-[#064e3b]" size={48} />
+              </div>
+              <h2 className="text-3xl font-serif mb-4 text-[#1e293b]">Success!</h2>
+              <p className="text-[#64748b] leading-relaxed mb-8">
+                Your journey has begun. We are preparing your sanctuary account.
+              </p>
+              <div className="flex flex-col gap-3">
+                <div className="h-1 w-full bg-gray-100 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: "100%" }}
+                    transition={{ duration: 3 }}
+                    className="h-full bg-[#064e3b]"
+                  />
+                </div>
+                <p className="text-xs text-[#94a3b8] uppercase tracking-widest font-bold">Redirecting to Login...</p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

@@ -88,6 +88,20 @@ namespace NguyenThiCamTu_2123110472.Controllers
                     await _context.SaveChangesAsync();
                 }
 
+                // 3. Nếu là Customer, tạo bản ghi trong bảng Customers
+                if (user.Role == "Customer")
+                {
+                    var customer = new Customer
+                    {
+                        FullName = user.FullName ?? user.Username,
+                        PhoneNumber = user.PhoneNumber ?? "",
+                        Email = user.Email ?? "",
+                        Username = user.Username
+                    };
+                    _context.Customers.Add(customer);
+                    await _context.SaveChangesAsync();
+                }
+
                 return Ok(new { Message = "Đăng ký thành công!" });
             }
             catch (Exception ex)
@@ -117,17 +131,20 @@ namespace NguyenThiCamTu_2123110472.Controllers
 
                 var token = GenerateJwtToken(user);
 
+                var customer = await _context.Customers.FirstOrDefaultAsync(c => c.Username == user.Username);
+
                 return Ok(new 
                 { 
                     Token = token, 
                     Message = "Login successful",
                     user = new {
                         user.Id,
+                        CustomerId = customer?.Id,
                         user.Username,
                         Role = user.Role ?? "Staff",
-                        FullName = user.FullName ?? "",
-                        PhoneNumber = user.PhoneNumber ?? "",
-                        Email = user.Email ?? "",
+                        FullName = user.FullName ?? customer?.FullName ?? "",
+                        PhoneNumber = user.PhoneNumber ?? customer?.PhoneNumber ?? "",
+                        Email = user.Email ?? customer?.Email ?? "",
                         Address = user.Address ?? ""
                     }
                 });
