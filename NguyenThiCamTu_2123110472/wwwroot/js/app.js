@@ -84,7 +84,9 @@ async function handleLogin(e) {
         state.token = result.Token;
         localStorage.setItem('crm_token', state.token);
         initApp();
-    } catch (err) {}
+    } catch (err) {
+        showToast(err.message, 'error');
+    }
 }
 
 async function handleRegister(e) {
@@ -948,6 +950,10 @@ window.showQuickCheckoutModal = async (id) => {
 async function initApp() {
     if (!state.token) return handleLogout();
     state.user = parseJwt(state.token);
+    if (!state.user) {
+        handleLogout();
+        return;
+    }
     document.getElementById('auth-overlay').classList.add('hidden');
     document.getElementById('main-sidebar').classList.remove('hidden');
     document.getElementById('display-name').textContent = state.user.username;
