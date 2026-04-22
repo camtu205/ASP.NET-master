@@ -156,6 +156,7 @@ using (var scope = app.Services.CreateScope())
         trySql("ALTER TABLE \"Customers\" ADD COLUMN \"Rank\" TEXT DEFAULT 'Standard';");
         trySql("ALTER TABLE \"Appointments\" ADD COLUMN \"IsPrepaid\" BOOLEAN DEFAULT FALSE;");
         trySql("ALTER TABLE \"Appointments\" ADD COLUMN \"PrepaidAmount\" DECIMAL DEFAULT 0;");
+        trySql("ALTER TABLE \"Appointments\" ADD COLUMN \"TotalPrice\" DECIMAL DEFAULT 0;");
         trySql("ALTER TABLE \"Reviews\" ADD COLUMN \"AppointmentId\" INTEGER;");
         trySql("ALTER TABLE \"Reviews\" ALTER COLUMN \"ServiceId\" DROP NOT NULL;");
         trySql("ALTER TABLE \"Users\" ADD COLUMN \"FullName\" TEXT;");
