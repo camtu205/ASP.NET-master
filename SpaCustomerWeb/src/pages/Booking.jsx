@@ -108,11 +108,19 @@ const Booking = () => {
     }
 
     const token = localStorage.getItem('spa_token');
-    const custId = localStorage.getItem('spa_customer_id');
+    let custId = localStorage.getItem('spa_customer_id');
+    
+    if (!custId) {
+      const userStr = localStorage.getItem('spa_user');
+      if (userStr) {
+        const u = JSON.parse(userStr);
+        custId = u.CustomerId || u.customerId;
+      }
+    }
 
     if (!token || !custId) {
-      showValidationMessage("Vui lòng đăng nhập lại để thực hiện đặt lịch.");
-      setTimeout(() => navigate('/login', { state: { from: '/booking' } }), 2000);
+      showValidationMessage("Vui lòng đăng nhập lại để thực hiện đặt lịch (Không tìm thấy mã khách hàng).");
+      setTimeout(() => navigate('/login', { state: { from: '/booking' } }), 2500);
       return;
     }
 

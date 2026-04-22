@@ -15,11 +15,17 @@ const Login = () => {
     
     try {
       const data = await login(formData);
-      localStorage.setItem('spa_token', data.Token);
-      localStorage.setItem('spa_user', JSON.stringify(data.user));
-      if (data.user && data.user.CustomerId) {
-        localStorage.setItem('spa_customer_id', data.user.CustomerId);
+      const token = data.Token || data.token;
+      const user = data.user || data.User;
+      
+      localStorage.setItem('spa_token', token);
+      localStorage.setItem('spa_user', JSON.stringify(user));
+      
+      const customerId = user?.CustomerId || user?.customerId;
+      if (customerId) {
+        localStorage.setItem('spa_customer_id', customerId);
       }
+      
       navigate('/');
     } catch (err) {
       alert(err.message || 'Login failed. Please check your credentials.');
