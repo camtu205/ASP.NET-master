@@ -6,9 +6,14 @@
 // Cấu hình URL Backend: Thay đổi URL Render của bạn tại đây khi deploy
 const RENDER_EXTERNAL_URL = 'https://asp-net-master.onrender.com'; 
 
-const API_BASE = (window.location.hostname.includes('vercel.app'))
-    ? RENDER_EXTERNAL_URL + '/api'
-    : '/api'; // Dùng đường dẫn tương đối khi cùng host (Render)
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? '/api'
+    : RENDER_EXTERNAL_URL + '/api';
+
+// Fallback if Render URL is not updated
+if (!RENDER_EXTERNAL_URL.includes('onrender.com')) {
+    console.error('RENDER_EXTERNAL_URL is not set correctly in app.js');
+}
 
 // --- State Management ---
 const state = {
@@ -75,31 +80,40 @@ async function apiCall(endpoint, method = 'GET', body = null, retries = 2) {
 
 // --- Auth ---
 async function handleLogin(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    console.log('Login triggered');
     try {
-        const result = await apiCall('/Auth/Login', 'POST', { 
-            username: document.getElementById('username').value, 
-            password: document.getElementById('password').value 
-        });
+        const username = document.getElementById('username')?.value;
+        const password = document.getElementById('password')?.value;
+        
+        if (!username || !password) {
+            showToast('Vui lòng nhập đầy đủ thông tin', 'error');
+            return;
+        }
+
+        const result = await apiCall('/Auth/Login', 'POST', { username, password });
         state.token = result.Token;
         localStorage.setItem('crm_token', state.token);
-        initApp();
+        await initApp();
     } catch (err) {
-        showToast(err.message, 'error');
+        console.error('Login error:', err);
+        showToast(err.message || 'Lỗi đăng nhập', 'error');
     }
 }
 
 async function handleRegister(e) {
-    e.preventDefault();
+    if (e) e.preventDefault();
     try {
-        await apiCall('/Auth/Register', 'POST', { 
-            username: document.getElementById('username').value, 
-            password: document.getElementById('password').value,
-            role: document.getElementById('role').value
-        });
+        const username = document.getElementById('username')?.value;
+        const password = document.getElementById('password')?.value;
+        const role = document.getElementById('role')?.value;
+
+        await apiCall('/Auth/Register', 'POST', { username, password, role });
         showToast('Đăng ký thành công! Vui lòng đăng nhập.');
         switchAuthTab('login');
-    } catch (err) {}
+    } catch (err) {
+        showToast(err.message || 'Lỗi đăng ký', 'error');
+    }
 }
 
 function handleLogout() {
@@ -978,11 +992,25 @@ async function initApp() {
     renderers.dashboard();
 }
 
-document.getElementById('auth-form').onsubmit = (e) => document.getElementById('tab-login').classList.contains('active') ? handleLogin(e) : handleRegister(e);
-document.getElementById('tab-login').onclick = () => switchAuthTab('login');
-document.getElementById('tab-register').onclick = () => switchAuthTab('register');
-document.getElementById('logout-btn').onclick = handleLogout;
-document.getElementById('close-modal').onclick = () => document.getElementById('edit-modal').classList.add('hidden');
+const authForm = document.getElementById('auth-form');
+if (authForm) {
+    authForm.addEventListener('submit', (e) => {
+        const isLogin = document.getElementById('tab-login').classList.contains('active');
+        if (isLogin) handleLogin(e); else handleRegister(e);
+    });
+}
+
+document.getElementById('auth-submit')?.addEventListener('click', (e) => {
+    // If for some reason submit doesn't fire, click will
+    if (!authForm.reportValidity()) return;
+    const isLogin = document.getElementById('tab-login').classList.contains('active');
+    if (isLogin) handleLogin(e); else handleRegister(e);
+});
+
+document.getElementById('tab-login')?.addEventListener('click', () => switchAuthTab('login'));
+document.getElementById('tab-register')?.addEventListener('click', () => switchAuthTab('register'));
+document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
+document.getElementById('close-modal')?.addEventListener('click', () => document.getElementById('edit-modal').classList.add('hidden'));
 
 document.title = "Ctus Spa - Quản trị";
 initApp();
