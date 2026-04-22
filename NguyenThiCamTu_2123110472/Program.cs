@@ -17,6 +17,7 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 // Add services to the container.
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<VnPayService>();
 
 // Cấu hình Forwarded Headers để nhận diện đúng HTTPS/IP khi chạy sau Proxy (Render, Vercel)
 builder.Services.Configure<Microsoft.AspNetCore.Builder.ForwardedHeadersOptions>(options =>

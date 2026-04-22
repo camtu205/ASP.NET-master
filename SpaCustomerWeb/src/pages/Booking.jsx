@@ -151,10 +151,11 @@ const Booking = () => {
         isPrepaid: isPrepaid
       };
 
-      if (isEdit) {
-        await updateAppointment(editApp.id, payload);
-      } else {
-        await bookAppointment(payload);
+      const response = await bookAppointment(payload);
+      
+      if (response.paymentUrl) {
+          window.location.href = response.paymentUrl;
+          return;
       }
       
       setIsBooked(true);

@@ -12,10 +12,12 @@ namespace NguyenThiCamTu_2123110472.Controllers
     public class AppointmentsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly VnPayService _vnpayService;
 
-        public AppointmentsController(AppDbContext context)
+        public AppointmentsController(AppDbContext context, VnPayService vnpayService)
         {
             _context = context;
+            _vnpayService = vnpayService;
         }
 
         private async Task<DateTime> CalculateEndTime(DateTime start, IEnumerable<int> serviceIds)
@@ -137,9 +139,9 @@ namespace NguyenThiCamTu_2123110472.Controllers
             public List<int> ServiceIds { get; set; } = new List<int>();
             public int? StaffId { get; set; }
             public int? BedId { get; set; }
+            public int? PromotionId { get; set; }
             public bool IgnoreConflicts { get; set; } = false;
             public bool IsPrepaid { get; set; } = false;
-            public int? PromotionId { get; set; }
         }
  
         [HttpPost("Book")]
@@ -215,6 +217,8 @@ namespace NguyenThiCamTu_2123110472.Controllers
             await _context.SaveChangesAsync();
 
             decimal totalBeforeDiscount = 0;
+            var detailsToAdd = new List<AppointmentDetail>();
+
             // Add details
             foreach (var sId in request.ServiceIds)
             {
@@ -228,10 +232,11 @@ namespace NguyenThiCamTu_2123110472.Controllers
                         Price = service.Price,
                         Quantity = 1
                     };
-                    _context.AppointmentDetails.Add(detail);
+                    detailsToAdd.Add(detail);
                     totalBeforeDiscount += service.Price;
                 }
             }
+            _context.AppointmentDetails.AddRange(detailsToAdd);
 
             // Xử lý giảm giá Thanh toán trước (5%, tối đa 100k)
             decimal prepaidDiscount = 0;
@@ -244,6 +249,8 @@ namespace NguyenThiCamTu_2123110472.Controllers
             decimal finalTotal = totalBeforeDiscount - prepaidDiscount;
             appointment.TotalPrice = finalTotal;
             appointment.PrepaidAmount = request.IsPrepaid ? finalTotal : 0;
+
+            string? paymentUrl = null;
 
             // Nếu thanh toán trước, tạo luôn Order và Payment
             if (request.IsPrepaid)
@@ -259,7 +266,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 _context.Orders.Add(order);
                 await _context.SaveChangesAsync();
 
-                foreach (var detail in appointment.AppointmentDetails)
+                foreach (var detail in detailsToAdd)
                 {
                     _context.OrderDetails.Add(new OrderDetail {
                         OrderId = order.Id,
@@ -273,23 +280,33 @@ namespace NguyenThiCamTu_2123110472.Controllers
                     OrderId = order.Id,
                     Amount = finalTotal,
                     PaymentDate = DateTime.Now,
-                    PaymentMethod = "VNPAY/Bank Transfer (Prepaid)",
-                    Status = "Completed"
+                    PaymentMethod = "VNPAY",
+                    Status = "Pending" // Change to Pending as we need real payment
                 });
+
+                // Generate VNPay URL
+                var ipAddr = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+                paymentUrl = _vnpayService.CreatePaymentUrl(order.Id, finalTotal, ipAddr, $"Thanh toan lich hen #{appointment.Id}");
             }
  
             // Tự động tạo thông báo
             var customer = await _context.Customers.FindAsync(request.CustomerId);
             _context.Notifications.Add(new Notification
             {
-                Title = request.IsPrepaid ? "Lịch hẹn đã thanh toán" : "Lịch hẹn mới",
-                Message = $"{(request.IsPrepaid ? "[ĐÃ TRẢ TRƯỚC] " : "")}Lịch hẹn: {customer?.FullName} vào {request.AppointmentDate:dd/MM/yyyy HH:mm}.",
+                Title = request.IsPrepaid ? "Yêu cầu thanh toán trước" : "Lịch hẹn mới",
+                Message = $"{(request.IsPrepaid ? "[CHỜ THANH TOÁN] " : "")}Lịch hẹn: {customer?.FullName} vào {request.AppointmentDate:dd/MM/yyyy HH:mm}.",
                 CreatedDate = DateTime.UtcNow,
                 UserId = 1 
             });
  
             await _context.SaveChangesAsync();
-            return CreatedAtAction("GetAppointment", new { id = appointment.Id }, appointment);
+
+            // Return anonymous object to include paymentUrl
+            return Ok(new { 
+                appointment, 
+                paymentUrl,
+                message = request.IsPrepaid ? "Vui lòng hoàn tất thanh toán." : "Đặt lịch thành công."
+            });
         }
 
         [HttpPut("{id}")]
