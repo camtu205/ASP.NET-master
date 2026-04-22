@@ -1,9 +1,27 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Leaf, Sparkles, Wind, ArrowRight, Star } from 'lucide-react';
+import { Leaf, Sparkles, Wind, ArrowRight, Star, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getReviews } from '../services/api';
 
 const Home = () => {
+  const [reviews, setReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(true);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const data = await getReviews();
+        setReviews(data.slice(0, 3)); // Show top 3 latest
+      } catch (err) {
+        console.error("Failed to fetch reviews", err);
+      } finally {
+        setLoadingReviews(false);
+      }
+    };
+    fetchReviews();
+  }, []);
+
   return (
     <div className="home-page">
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
@@ -86,33 +104,43 @@ const Home = () => {
                 <Link to="/history" className="text-[#064e3b] font-bold underline flex items-center gap-2">Gửi đánh giá của bạn <ArrowRight size={18} /></Link>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-8">
-                {/* Simplified static reviews for now, you can hook this up to getReviews() later */}
-                {[
-                    { name: "Minh Anh", rating: 5, comment: "Trải nghiệm tuyệt vời, không gian yên tĩnh và chuyên viên rất chuyên nghiệp. Tôi sẽ quay lại nhiều lần nữa." },
-                    { name: "Hoàng Yến", rating: 5, comment: "Dịch vụ massage đá nóng làm mình cảm thấy rất thư giãn. Da mình sáng hẳn lên sau liệu trình chăm sóc." },
-                    { name: "Quốc Bảo", rating: 4, comment: "Chất lượng dịch vụ tốt, nhân viên nhiệt tình. Hy vọng Spa sẽ mở thêm nhiều chi nhánh hơn." }
-                ].map((review, idx) => (
-                    <motion.div 
-                        key={idx}
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                        className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col gap-6"
-                    >
-                        <div className="flex gap-1 text-[#d4af37]">
-                            {[...Array(review.rating)].map((_, i) => <Star key={i} size={16} fill="#d4af37" color="#d4af37" />)}
-                        </div>
-                        <p className="text-gray-600 leading-relaxed font-light italic">"{review.comment}"</p>
-                        <div className="mt-auto flex items-center gap-3">
-                            <div className="w-10 h-10 bg-[#064e3b] rounded-full flex items-center justify-center text-white font-bold text-xs">
-                                {review.name.charAt(0)}
+            {loadingReviews ? (
+               <div className="flex justify-center py-20">
+                  <Loader2 className="animate-spin text-[#d4af37]" size={40} />
+               </div>
+            ) : reviews.length === 0 ? (
+                <div className="text-center py-20 bg-white rounded-[2.5rem] border border-dashed text-gray-400">
+                    Chưa có đánh giá nào. Hãy là người đầu tiên trải nghiệm!
+                </div>
+            ) : (
+                <div className="grid md:grid-cols-3 gap-8">
+                    {reviews.map((review, idx) => (
+                        <motion.div 
+                            key={review.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.1 }}
+                            className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col gap-6"
+                        >
+                            <div className="flex gap-1 text-[#d4af37]">
+                                {[...Array(review.rating)].map((_, i) => <Star key={i} size={16} fill="#d4af37" color="#d4af37" />)}
                             </div>
-                            <span className="font-bold text-sm text-[#1e293b]">{review.name}</span>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
+                            <p className="text-gray-600 leading-relaxed font-light italic" style={{ display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                "{review.comment}"
+                            </p>
+                            <div className="mt-auto flex items-center gap-3">
+                                <div className="w-10 h-10 bg-[#064e3b] rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                    {(review.customer?.fullName || 'K').charAt(0)}
+                                </div>
+                                <div>
+                                    <p className="font-bold text-sm text-[#1e293b]">{review.customer?.fullName || 'Khách vãng lai'}</p>
+                                    <p className="text-[10px] text-gray-400">{review.service?.name || 'Trải nghiệm tổng thể'}</p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
         </div>
       </section>
 
