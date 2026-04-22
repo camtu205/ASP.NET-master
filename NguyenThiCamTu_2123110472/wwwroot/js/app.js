@@ -81,7 +81,7 @@ async function handleLogin(e) {
             username: e.target.username.value, 
             password: e.target.password.value 
         });
-        state.token = result.token;
+        state.token = result.Token;
         localStorage.setItem('crm_token', state.token);
         initApp();
     } catch (err) {}

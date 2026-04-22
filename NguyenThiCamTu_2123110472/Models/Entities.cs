@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace NguyenThiCamTu_2123110472.Models
 {
@@ -56,9 +57,13 @@ namespace NguyenThiCamTu_2123110472.Models
         [MaxLength(50)]
         public string? Username { get; set; }
 
+        [JsonIgnore]
         public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+        [JsonIgnore]
         public ICollection<Order> Orders { get; set; } = new List<Order>();
+        [JsonIgnore]
         public ICollection<Review> Reviews { get; set; } = new List<Review>();
+        [JsonIgnore]
         public ICollection<CustomerTreatment> CustomerTreatments { get; set; } = new List<CustomerTreatment>();
         public LoyaltyPoint? LoyaltyPoint { get; set; }
     }
@@ -85,8 +90,11 @@ namespace NguyenThiCamTu_2123110472.Models
         [ForeignKey("CategoryId")]
         public ServiceCategory? Category { get; set; }
 
+        [JsonIgnore]
         public ICollection<AppointmentDetail> AppointmentDetails { get; set; } = new List<AppointmentDetail>();
+        [JsonIgnore]
         public ICollection<Review> Reviews { get; set; } = new List<Review>();
+        [JsonIgnore]
         public ICollection<ServiceImage> ServiceImages { get; set; } = new List<ServiceImage>();
     }
 
@@ -132,8 +140,11 @@ namespace NguyenThiCamTu_2123110472.Models
         [EmailAddress(ErrorMessage = "Địa chỉ Email không hợp lệ.")]
         public string Email { get; set; } = string.Empty;
 
+        [JsonIgnore]
         public ICollection<Appointment> Appointments { get; set; } = new List<Appointment>();
+        [JsonIgnore]
         public ICollection<WorkSchedule> WorkSchedules { get; set; } = new List<WorkSchedule>();
+        [JsonIgnore]
         public ICollection<TreatmentSession> TreatmentSessions { get; set; } = new List<TreatmentSession>();
     }
 
@@ -461,6 +472,7 @@ namespace NguyenThiCamTu_2123110472.Models
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public decimal PriceMultiplier { get; set; } = 1.0m;
+        [JsonIgnore]
         public ICollection<Room> Rooms { get; set; } = new List<Room>();
     }
 
@@ -476,6 +488,7 @@ namespace NguyenThiCamTu_2123110472.Models
         [MaxLength(20)]
         public string Status { get; set; } = "Available"; // Available, Occupied, Maintenance
         public string Note { get; set; } = string.Empty;
+        [JsonIgnore]
         public ICollection<Bed> Beds { get; set; } = new List<Bed>();
     }
 
