@@ -170,8 +170,8 @@ const BookingHistory = () => {
                                             {status.label}
                                         </div>
                                         {app.isPrepaid && (
-                                            <div className="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-[#064e3b] text-[#d4af37]">
-                                                Đã trả trước
+                                            <div className="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-green-600 text-white flex items-center gap-1.5 shadow-sm shadow-green-200">
+                                                <CheckCircle size={10} /> Đã thanh toán
                                             </div>
                                         )}
                                         <span className="text-xs text-gray-400 font-medium">Mã lịch: #{app.id}</span>
