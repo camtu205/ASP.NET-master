@@ -144,33 +144,31 @@ using (var scope = app.Services.CreateScope())
         var context = services.GetRequiredService<AppDbContext>();
         context.Database.Migrate();
         
-        // Tự động cập nhật Schema cho bảng Promotions nếu thiếu cột
-        string[] patches = {
-            "ALTER TABLE \"Promotions\" ADD COLUMN \"MaxUsage\" INTEGER;",
-            "ALTER TABLE \"Promotions\" ADD COLUMN \"ApplicableServiceIds\" TEXT;",
-            "ALTER TABLE \"Treatments\" ADD COLUMN \"ServiceIds\" TEXT;",
-            "ALTER TABLE \"Customers\" ADD COLUMN \"Username\" TEXT;",
-            "ALTER TABLE \"Customers\" ADD COLUMN \"Rank\" TEXT DEFAULT 'Standard';",
-            "ALTER TABLE \"Appointments\" ADD COLUMN \"IsPrepaid\" BOOLEAN DEFAULT FALSE;",
-            "ALTER TABLE \"Appointments\" ADD COLUMN \"PrepaidAmount\" DECIMAL DEFAULT 0;",
-            "ALTER TABLE \"Reviews\" ADD COLUMN \"AppointmentId\" INTEGER;",
-            "ALTER TABLE \"Reviews\" ALTER COLUMN \"ServiceId\" DROP NOT NULL;",
-            "ALTER TABLE \"Users\" ADD COLUMN \"FullName\" TEXT;",
-            "ALTER TABLE \"Users\" ADD COLUMN \"PhoneNumber\" TEXT;",
-            "ALTER TABLE \"Users\" ADD COLUMN \"Email\" TEXT;",
-            "ALTER TABLE \"Users\" ADD COLUMN \"Address\" TEXT;"
+        // Tự động cập nhật Schema
+        Action<string> trySql = (sql) => {
+            try { context.Database.ExecuteSqlRaw(sql); } catch { }
         };
 
-        foreach (var patch in patches) {
-            try { 
-                // Thử chạy cả bản có IF NOT EXISTS và không có tùy theo DB
-                var finalPatch = patch.Replace("ADD COLUMN", "ADD COLUMN IF NOT EXISTS");
-                context.Database.ExecuteSqlRaw(finalPatch); 
-            } 
-            catch { 
-                try { context.Database.ExecuteSqlRaw(patch); } catch { /* Ignore if already exists */ }
-            }
-        }
+        trySql("ALTER TABLE \"Promotions\" ADD COLUMN \"MaxUsage\" INTEGER;");
+        trySql("ALTER TABLE \"Promotions\" ADD COLUMN \"ApplicableServiceIds\" TEXT;");
+        trySql("ALTER TABLE \"Treatments\" ADD COLUMN \"ServiceIds\" TEXT;");
+        trySql("ALTER TABLE \"Customers\" ADD COLUMN \"Username\" TEXT;");
+        trySql("ALTER TABLE \"Customers\" ADD COLUMN \"Rank\" TEXT DEFAULT 'Standard';");
+        trySql("ALTER TABLE \"Appointments\" ADD COLUMN \"IsPrepaid\" BOOLEAN DEFAULT FALSE;");
+        trySql("ALTER TABLE \"Appointments\" ADD COLUMN \"PrepaidAmount\" DECIMAL DEFAULT 0;");
+        trySql("ALTER TABLE \"Reviews\" ADD COLUMN \"AppointmentId\" INTEGER;");
+        trySql("ALTER TABLE \"Reviews\" ALTER COLUMN \"ServiceId\" DROP NOT NULL;");
+        trySql("ALTER TABLE \"Users\" ADD COLUMN \"FullName\" TEXT;");
+        trySql("ALTER TABLE \"Users\" ADD COLUMN \"PhoneNumber\" TEXT;");
+        trySql("ALTER TABLE \"Users\" ADD COLUMN \"Email\" TEXT;");
+        trySql("ALTER TABLE \"Users\" ADD COLUMN \"Address\" TEXT;");
+        
+        // Cố gắng chạy bản có IF NOT EXISTS nếu Postgres
+        trySql("ALTER TABLE \"Promotions\" ADD COLUMN IF NOT EXISTS \"MaxUsage\" INTEGER;");
+        trySql("ALTER TABLE \"Appointments\" ADD COLUMN IF NOT EXISTS \"IsPrepaid\" BOOLEAN DEFAULT FALSE;");
+        trySql("ALTER TABLE \"Appointments\" ADD COLUMN IF NOT EXISTS \"PrepaidAmount\" DECIMAL DEFAULT 0;");
+        trySql("ALTER TABLE \"Reviews\" ADD COLUMN IF NOT EXISTS \"AppointmentId\" INTEGER;");
+
 
 
         app.Logger.LogInformation(">>> DATABASE MIGRATION SUCCESSFUL! <<<");
