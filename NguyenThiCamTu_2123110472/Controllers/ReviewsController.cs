@@ -22,12 +22,17 @@ namespace NguyenThiCamTu_2123110472.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Review>>> GetReviews()
         {
-            return await _context.Reviews
-                .Include(r => r.Customer)
-                .Include(r => r.Service)
-                .Include(r => r.Appointment).ThenInclude(a => a.AppointmentDetails).ThenInclude(ad => ad.Service)
-                .OrderByDescending(r => r.CreatedAt)
-                .ToListAsync();
+            try {
+                return await _context.Reviews
+                    .Include(r => r.Customer)
+                    .Include(r => r.Service)
+                    .Include(r => r.Appointment).ThenInclude(a => a != null ? a.AppointmentDetails : null).ThenInclude(ad => ad != null ? ad.Service : null)
+                    .OrderByDescending(r => r.CreatedAt)
+                    .ToListAsync();
+            }
+            catch (Exception ex) {
+                return StatusCode(500, $"Lỗi truy vấn Review: {ex.Message} - {ex.InnerException?.Message}");
+            }
         }
 
         [AllowAnonymous]
