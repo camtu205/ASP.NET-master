@@ -75,6 +75,47 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Reviews Section */}
+      <section className="section-padding bg-[#fdfbf9]">
+        <div className="container">
+            <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+                <div className="max-w-xl">
+                    <h2 className="text-sm uppercase tracking-[0.3em] text-[#d4af37] font-bold mb-4">Mọi người nói gì về chúng tôi</h2>
+                    <h1 className="text-4xl md:text-5xl font-serif">Đánh giá của khách hàng</h1>
+                </div>
+                <Link to="/history" className="text-[#064e3b] font-bold underline flex items-center gap-2">Gửi đánh giá của bạn <ArrowRight size={18} /></Link>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8">
+                {/* Simplified static reviews for now, you can hook this up to getReviews() later */}
+                {[
+                    { name: "Minh Anh", rating: 5, comment: "Trải nghiệm tuyệt vời, không gian yên tĩnh và chuyên viên rất chuyên nghiệp. Tôi sẽ quay lại nhiều lần nữa." },
+                    { name: "Hoàng Yến", rating: 5, comment: "Dịch vụ massage đá nóng làm mình cảm thấy rất thư giãn. Da mình sáng hẳn lên sau liệu trình chăm sóc." },
+                    { name: "Quốc Bảo", rating: 4, comment: "Chất lượng dịch vụ tốt, nhân viên nhiệt tình. Hy vọng Spa sẽ mở thêm nhiều chi nhánh hơn." }
+                ].map((review, idx) => (
+                    <motion.div 
+                        key={idx}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                        className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 flex flex-col gap-6"
+                    >
+                        <div className="flex gap-1 text-[#d4af37]">
+                            {[...Array(review.rating)].map((_, i) => <Star key={i} size={16} fill="#d4af37" color="#d4af37" />)}
+                        </div>
+                        <p className="text-gray-600 leading-relaxed font-light italic">"{review.comment}"</p>
+                        <div className="mt-auto flex items-center gap-3">
+                            <div className="w-10 h-10 bg-[#064e3b] rounded-full flex items-center justify-center text-white font-bold text-xs">
+                                {review.name.charAt(0)}
+                            </div>
+                            <span className="font-bold text-sm text-[#1e293b]">{review.name}</span>
+                        </div>
+                    </motion.div>
+                ))}
+            </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="section-padding relative overflow-hidden bg-[#064e3b] text-white">
         <div className="container relative z-10 text-center">

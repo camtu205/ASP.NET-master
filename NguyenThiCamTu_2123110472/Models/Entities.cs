@@ -289,7 +289,7 @@ namespace NguyenThiCamTu_2123110472.Models
         [ForeignKey("CustomerId")]
         public Customer? Customer { get; set; }
 
-        public int ServiceId { get; set; }
+        public int? ServiceId { get; set; }
         [ForeignKey("ServiceId")]
         public Service? Service { get; set; }
 

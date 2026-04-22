@@ -13,17 +13,23 @@ import {
   Edit,
   XCircle,
   Search,
-  Package
+  Package,
+  Star,
+  MessageSquare
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { getMyAppointments, cancelAppointment } from '../services/api';
+import { getMyAppointments, cancelAppointment, submitReview } from '../services/api';
 
 const BookingHistory = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, pending, done, cancelled
+  const [reviewModal, setReviewModal] = useState(null); // stores the appointment being reviewed
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  
   const navigate = useNavigate();
-
   const customerId = localStorage.getItem('spa_customer_id');
 
   const fetchHistory = async () => {
@@ -52,6 +58,31 @@ const BookingHistory = () => {
       fetchHistory();
     } catch (err) {
       alert("Lỗi khi hủy: " + err.message);
+    }
+  };
+
+  const handleReviewSubmit = async () => {
+    if (!comment.trim()) {
+        alert("Vui lòng nhập nhận xét của bạn.");
+        return;
+    }
+    setSubmittingReview(true);
+    try {
+      await submitReview({
+        customerId: parseInt(customerId),
+        serviceId: reviewModal.appointmentDetails[0]?.serviceId || null,
+        rating: rating,
+        comment: comment,
+        createdAt: new Date().toISOString()
+      });
+      alert("Cảm ơn bạn đã đánh giá!");
+      setReviewModal(null);
+      setComment('');
+      setRating(5);
+    } catch (err) {
+      alert("Gửi đánh giá thất bại: " + err.message);
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -120,6 +151,7 @@ const BookingHistory = () => {
                 {filtered.map((app, idx) => {
                     const status = getStatusColor(app.status);
                     const canEdit = app.status === 'Pending';
+                    const isDone = app.status === 'Done';
                     const dateObj = new Date(app.appointmentDate);
 
                     return (
@@ -194,6 +226,14 @@ const BookingHistory = () => {
                                                 <Edit size={16} /> Thay đổi
                                             </button>
                                         )}
+                                        {isDone && (
+                                            <button 
+                                                onClick={() => setReviewModal(app)}
+                                                className="w-full py-3.5 rounded-2xl bg-[#d4af37] text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#b8952e] transition-all shadow-md"
+                                            >
+                                                <Star size={16} /> Đánh giá
+                                            </button>
+                                        )}
                                         {app.status !== 'Cancelled' && app.status !== 'Done' && (
                                             <button 
                                                 onClick={() => handleCancel(app.id)}
@@ -220,6 +260,61 @@ const BookingHistory = () => {
             </div>
         </div>
       </div>
+
+      {/* Review Modal */}
+      <AnimatePresence>
+        {reviewModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+            <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setReviewModal(null)} 
+            />
+            <motion.div 
+                initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                className="bg-white rounded-[3rem] p-10 max-w-lg w-full relative z-10 shadow-2xl"
+            >
+                <div className="text-center mb-8">
+                    <div className="w-16 h-16 bg-[#d4af3711] text-[#d4af37] rounded-full flex items-center justify-center mx-auto mb-4">
+                        <MessageSquare size={32} />
+                    </div>
+                    <h3 className="text-2xl font-serif">Cảm nhận của bạn</h3>
+                    <p className="text-gray-500 text-sm mt-2">Ý kiến của bạn giúp Lumina Spa hoàn thiện hơn mỗi ngày.</p>
+                </div>
+
+                <div className="space-y-6">
+                    <div className="text-center">
+                        <p className="text-xs uppercase font-bold text-gray-400 mb-3">Mức độ hài lòng</p>
+                        <div className="flex justify-center gap-2">
+                            {[1, 2, 3, 4, 5].map(s => (
+                                <button key={s} onClick={() => setRating(s)} className="transition-transform hover:scale-125">
+                                    <Star size={32} fill={s <= rating ? '#d4af37' : 'none'} color={s <= rating ? '#d4af37' : '#e2e8f0'} />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div>
+                        <textarea 
+                            className="w-full h-32 p-4 rounded-2xl bg-gray-50 border-none outline-none focus:ring-2 focus:ring-[#d4af37] transition-all text-sm"
+                            placeholder="Chia sẻ trải nghiệm của bạn về dịch vụ, nhân viên và không gian..."
+                            value={comment}
+                            onChange={(e) => setComment(e.target.value)}
+                        />
+                    </div>
+
+                    <button 
+                        onClick={handleReviewSubmit}
+                        disabled={submittingReview}
+                        className="btn-primary w-full py-4 flex items-center justify-center gap-2 shadow-lg"
+                    >
+                        {submittingReview ? <Loader2 className="animate-spin" size={20} /> : 'Gửi đánh giá ngay'}
+                    </button>
+                    <button onClick={() => setReviewModal(null)} className="w-full text-gray-400 text-sm font-bold">Để sau</button>
+                </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

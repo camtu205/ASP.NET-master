@@ -58,3 +58,10 @@ export const updateAppointment = (id, data) => apiFetch(`/Appointments/${id}`, {
 export const cancelAppointment = (id) => apiFetch(`/Appointments/${id}`, {
   method: 'DELETE',
 });
+
+export const getReviews = () => apiFetch('/Reviews');
+
+export const submitReview = (reviewData) => apiFetch('/Reviews', {
+  method: 'POST',
+  body: JSON.stringify(reviewData),
+});

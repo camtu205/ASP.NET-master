@@ -18,12 +18,18 @@ namespace NguyenThiCamTu_2123110472.Controllers
             _context = context;
         }
 
+        [AllowAnonymous]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Review>>> GetReviews()
         {
-            return await _context.Reviews.Include(r => r.Customer).Include(r => r.Service).ToListAsync();
+            return await _context.Reviews
+                .Include(r => r.Customer)
+                .Include(r => r.Service)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
         }
 
+        [AllowAnonymous]
         [HttpGet("Service/{serviceId}")]
         public async Task<ActionResult<IEnumerable<Review>>> GetServiceReviews(int serviceId)
         {
