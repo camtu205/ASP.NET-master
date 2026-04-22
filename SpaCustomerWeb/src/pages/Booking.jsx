@@ -34,6 +34,7 @@ const Booking = () => {
   const initialServices = location.state?.selectedServices || [];
 
   const [step, setStep] = useState(1);
+  const [isPrepaid, setIsPrepaid] = useState(false);
   const [services, setServices] = useState([]);
   const [staffs, setStaffs] = useState([]);
   const [roomTypes, setRoomTypes] = useState([]);
@@ -146,7 +147,8 @@ const Booking = () => {
         appointmentDate: dateTime.toISOString(),
         serviceIds: selectedServices.map(s => s.id),
         staffId: selectedStaff?.id || null,
-        bedId: selectedRoomType ? 1 : null // Mocking bed for now
+        bedId: selectedRoomType ? 1 : null,
+        isPrepaid: isPrepaid
       };
 
       if (isEdit) {
@@ -185,6 +187,8 @@ const Booking = () => {
   const basePrice = selectedServices.reduce((sum, s) => sum + Number(s.price), 0);
   const roomMultiplier = selectedRoomType ? Number(selectedRoomType.priceMultiplier) : 1;
   const totalPrice = (basePrice * roomMultiplier) + selectedProducts.reduce((sum, p) => sum + (Number(p.price) * (p.quantity || 1)), 0);
+  const prepaidDiscount = isPrepaid ? Math.min(totalPrice * 0.05, 100000) : 0;
+  const finalPrice = totalPrice - prepaidDiscount;
 
   if (loading) return (
     <div className="pt-40 flex items-center justify-center min-h-[60vh]">
@@ -434,21 +438,45 @@ const Booking = () => {
 
               {step === 5 && (
                 <motion.div key="step5" initial={{ x: 20, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: -20, opacity: 0 }}>
-                  <h3 className="text-3xl font-serif mb-8">Xác nhận thông tin</h3>
-                  <div className="space-y-6">
+                  <h3 className="text-3xl font-serif mb-8">Xác nhận & Thanh toán</h3>
+                  <div className="space-y-8">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                        <div 
+                            onClick={() => setIsPrepaid(false)}
+                            className="p-6 rounded-3xl border-2 cursor-pointer transition-all flex flex-col gap-2"
+                            style={{ 
+                                borderColor: !isPrepaid ? '#064e3b' : '#f1f5f9',
+                                backgroundColor: !isPrepaid ? '#f0fdf4' : 'white'
+                            }}
+                        >
+                            <span className="font-bold">Thanh toán tại quầy</span>
+                            <span className="text-xs text-gray-500">Thanh toán sau khi hoàn thành dịch vụ</span>
+                        </div>
+                        <div 
+                            onClick={() => setIsPrepaid(true)}
+                            className="p-6 rounded-3xl border-2 cursor-pointer transition-all flex flex-col gap-2 relative overflow-hidden"
+                            style={{ 
+                                borderColor: isPrepaid ? '#d4af37' : '#f1f5f9',
+                                backgroundColor: isPrepaid ? '#fffdf0' : 'white'
+                            }}
+                        >
+                            <div className="bg-[#d4af37] text-white text-[10px] px-3 py-1 absolute top-0 right-0 rounded-bl-xl font-bold uppercase">Ưu đãi -5%</div>
+                            <span className="font-bold">Thanh toán trước</span>
+                            <span className="text-xs text-gray-500">Giảm 5% (Tối đa 100k) & Không cần chờ đợi</span>
+                        </div>
+                    </div>
+
                     <div className="flex items-start gap-4 p-6 bg-[#fcfaf8] rounded-3xl border border-[#d4af3733]">
                       <Info className="text-[#d4af37]" />
-                      <div>
-                        <p className="font-bold text-[#064e3b]">Lịch trình dự kiến</p>
+                      <div className="flex-1">
+                        <p className="font-bold text-[#064e3b]">Chi tiết lịch hẹn</p>
                         <p className="text-sm text-gray-600">
                           {selectedDate ? new Date(selectedDate).toLocaleDateString('vi-VN') : ''} • {selectedTime} <br />
-                          Thời gian dự kiến: {totalServiceDuration} phút
+                          {selectedStaff ? `Kỹ thuật viên: ${selectedStaff.fullName}` : 'Tự động sắp xếp kỹ thuật viên'}
                         </p>
                       </div>
                     </div>
-                    {selectedStaff && (
-                      <p className="px-6 text-sm">Chuyên viên yêu cầu: <span className="font-bold text-[#064e3b]">{selectedStaff.fullName}</span></p>
-                    )}
+                    
                     <div className="border-t pt-6 px-6">
                       <label className="flex items-center gap-3 cursor-pointer group">
                         <input type="checkbox" className="w-6 h-6 accent-[#064e3b]" id="agree-checkbox" />
@@ -522,8 +550,11 @@ const Booking = () => {
               )}
 
               <div className="border-t-2 border-dashed pt-6 flex justify-between items-end">
-                <span className="text-gray-400 text-xs italic">Tổng cộng</span>
-                <span className="text-3xl font-serif text-[#064e3b]">{totalPrice.toLocaleString()}đ</span>
+                <div className="text-right flex-1">
+                    <span className="text-gray-400 text-xs italic block">Tổng cộng</span>
+                    {isPrepaid && <span className="text-[10px] text-green-600 font-bold block">-{prepaidDiscount.toLocaleString()}đ (Ưu đãi trả trước)</span>}
+                </div>
+                <span className="text-3xl font-serif text-[#064e3b] ml-4">{finalPrice.toLocaleString()}đ</span>
               </div>
             </div>
           </div>

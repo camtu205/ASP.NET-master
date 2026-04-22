@@ -138,6 +138,8 @@ namespace NguyenThiCamTu_2123110472.Controllers
             public int? StaffId { get; set; }
             public int? BedId { get; set; }
             public bool IgnoreConflicts { get; set; } = false;
+            public bool IsPrepaid { get; set; } = false;
+            public int? PromotionId { get; set; }
         }
  
         [HttpPost("Book")]
@@ -153,30 +155,15 @@ namespace NguyenThiCamTu_2123110472.Controllers
             var customerBusy = await _context.Appointments
                 .AnyAsync(a => a.CustomerId == request.CustomerId && 
                                a.Status != "Cancelled" &&
+                               a.Status != "Deleted" &&
                                a.AppointmentDate >= request.AppointmentDate.AddHours(-1) &&
                                a.AppointmentDate <= request.AppointmentDate.AddHours(1));
  
             if (customerBusy && !request.IgnoreConflicts)
             {
-                // Trả về Conflict (409) để Frontend hiển thị hộp thoại xác nhận
                 return Conflict("Khách hàng đã có một lịch hẹn khác gần khung giờ này. Bạn vẫn muốn tiếp tục chứ?");
             }
  
-            // 3. Kiểm tra trùng lịch của Nhân viên (nếu có chọn)
-            if (request.StaffId.HasValue)
-            {
-                var staffBusy = await _context.Appointments
-                    .AnyAsync(a => a.StaffId == request.StaffId && 
-                                   a.Status != "Cancelled" &&
-                                   a.AppointmentDate >= request.AppointmentDate.AddHours(-1) &&
-                                   a.AppointmentDate <= request.AppointmentDate.AddHours(1));
-                if (staffBusy)
-                {
-                    return BadRequest("Nhân viên bạn chọn đã có lịch hẹn khác trong khung giờ này. Vui lòng chọn nhân viên khác.");
-                }
-            }
- 
-            // Create Appointment
             // 3. Kiểm tra trùng giường
             if (request.BedId.HasValue)
             {
@@ -195,18 +182,39 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 }
             }
 
+            // Tự động gán nhân viên nếu thanh toán trước mà không chọn staff cụ thể
+            int? assignedStaffId = request.StaffId;
+            if (request.IsPrepaid && !assignedStaffId.HasValue)
+            {
+                // Chọn nhân viên Kỹ thuật viên đầu tiên không bận khung giờ này
+                var busyStaffIds = await _context.Appointments
+                    .Where(a => a.Status != "Cancelled" && a.Status != "Deleted" && a.StaffId != null &&
+                                a.AppointmentDate >= request.AppointmentDate.AddHours(-1) &&
+                                a.AppointmentDate <= request.AppointmentDate.AddHours(1))
+                    .Select(a => a.StaffId)
+                    .ToListAsync();
+                
+                var availableStaff = await _context.Staffs
+                    .Where(s => s.Position == "Kỹ thuật viên" && !busyStaffIds.Contains(s.Id))
+                    .FirstOrDefaultAsync();
+                
+                if (availableStaff != null) assignedStaffId = availableStaff.Id;
+            }
+
             var appointment = new Appointment
             {
                 CustomerId = request.CustomerId,
                 AppointmentDate = request.AppointmentDate,
-                StaffId = request.StaffId,
+                StaffId = assignedStaffId,
                 BedId = request.BedId,
-                Status = request.StaffId.HasValue ? "Assigned" : "Pending"
+                IsPrepaid = request.IsPrepaid,
+                Status = assignedStaffId.HasValue ? "Assigned" : "Pending"
             };
  
             _context.Appointments.Add(appointment);
             await _context.SaveChangesAsync();
- 
+
+            decimal totalBeforeDiscount = 0;
             // Add details
             foreach (var sId in request.ServiceIds)
             {
@@ -221,15 +229,61 @@ namespace NguyenThiCamTu_2123110472.Controllers
                         Quantity = 1
                     };
                     _context.AppointmentDetails.Add(detail);
+                    totalBeforeDiscount += service.Price;
                 }
+            }
+
+            // Xử lý giảm giá Thanh toán trước (5%, tối đa 100k)
+            decimal prepaidDiscount = 0;
+            if (request.IsPrepaid)
+            {
+                prepaidDiscount = totalBeforeDiscount * 0.05m;
+                if (prepaidDiscount > 100000) prepaidDiscount = 100000;
+            }
+
+            decimal finalTotal = totalBeforeDiscount - prepaidDiscount;
+            appointment.TotalPrice = finalTotal;
+            appointment.PrepaidAmount = request.IsPrepaid ? finalTotal : 0;
+
+            // Nếu thanh toán trước, tạo luôn Order và Payment
+            if (request.IsPrepaid)
+            {
+                var order = new Order
+                {
+                    CustomerId = request.CustomerId,
+                    AppointmentId = appointment.Id,
+                    OrderDate = DateTime.Now,
+                    TotalAmount = finalTotal,
+                    PromotionId = request.PromotionId
+                };
+                _context.Orders.Add(order);
+                await _context.SaveChangesAsync();
+
+                foreach (var detail in appointment.AppointmentDetails)
+                {
+                    _context.OrderDetails.Add(new OrderDetail {
+                        OrderId = order.Id,
+                        ServiceId = detail.ServiceId,
+                        Quantity = 1,
+                        Price = detail.Price
+                    });
+                }
+
+                _context.Payments.Add(new Payment {
+                    OrderId = order.Id,
+                    Amount = finalTotal,
+                    PaymentDate = DateTime.Now,
+                    PaymentMethod = "VNPAY/Bank Transfer (Prepaid)",
+                    Status = "Completed"
+                });
             }
  
             // Tự động tạo thông báo
             var customer = await _context.Customers.FindAsync(request.CustomerId);
             _context.Notifications.Add(new Notification
             {
-                Title = "Lịch hẹn mới",
-                Message = $"Đặt lịch mới: Khách {customer?.FullName} vào {request.AppointmentDate:dd/MM/yyyy HH:mm}.",
+                Title = request.IsPrepaid ? "Lịch hẹn đã thanh toán" : "Lịch hẹn mới",
+                Message = $"{(request.IsPrepaid ? "[ĐÃ TRẢ TRƯỚC] " : "")}Lịch hẹn: {customer?.FullName} vào {request.AppointmentDate:dd/MM/yyyy HH:mm}.",
                 CreatedDate = DateTime.UtcNow,
                 UserId = 1 
             });
@@ -237,14 +291,23 @@ namespace NguyenThiCamTu_2123110472.Controllers
             await _context.SaveChangesAsync();
             return CreatedAtAction("GetAppointment", new { id = appointment.Id }, appointment);
         }
+
         [HttpPut("{id}")]
         public async Task<IActionResult> PutAppointment(int id, [FromBody] BookingDto request)
         {
             var appointment = await _context.Appointments
                 .Include(a => a.AppointmentDetails)
                 .FirstOrDefaultAsync(a => a.Id == id);
-
+ 
             if (appointment == null) return NotFound();
+
+            if (appointment.IsPrepaid)
+            {
+                return BadRequest("Lịch hẹn đã thanh toán trước không thể chỉnh sửa.");
+            }
+ 
+            // 1. Kiểm tra điều kiện: không được sửa khi còn dưới 30 phút
+            if (appointment.AppointmentDate < DateTime.Now.AddMinutes(30))ll) return NotFound();
 
             // 1. Kiểm tra điều kiện: không được sửa khi còn dưới 30 phút
             if (appointment.AppointmentDate < DateTime.Now.AddMinutes(30))

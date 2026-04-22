@@ -151,7 +151,7 @@ const BookingHistory = () => {
             <div className="grid gap-6">
                 {filtered.map((app, idx) => {
                     const status = getStatusColor(app.status);
-                    const canEdit = app.status === 'Pending';
+                    const canEdit = app.status === 'Pending' && !app.isPrepaid;
                     const isDone = app.status === 'Done';
                     const dateObj = new Date(app.appointmentDate);
 
@@ -169,6 +169,11 @@ const BookingHistory = () => {
                                         <div className="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest" style={{ backgroundColor: status.bg, color: status.text }}>
                                             {status.label}
                                         </div>
+                                        {app.isPrepaid && (
+                                            <div className="px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-[#064e3b] text-[#d4af37]">
+                                                Đã trả trước
+                                            </div>
+                                        )}
                                         <span className="text-xs text-gray-400 font-medium">Mã lịch: #{app.id}</span>
                                     </div>
 

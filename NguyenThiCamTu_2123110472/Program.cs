@@ -150,6 +150,8 @@ using (var scope = app.Services.CreateScope())
             context.Database.ExecuteSqlRaw("ALTER TABLE \"Treatments\" ADD COLUMN IF NOT EXISTS \"ServiceIds\" TEXT;");
             context.Database.ExecuteSqlRaw("ALTER TABLE \"Customers\" ADD COLUMN IF NOT EXISTS \"Username\" TEXT;");
             context.Database.ExecuteSqlRaw("ALTER TABLE \"Customers\" ADD COLUMN IF NOT EXISTS \"Rank\" TEXT DEFAULT 'Standard';");
+            context.Database.ExecuteSqlRaw("ALTER TABLE \"Appointments\" ADD COLUMN IF NOT EXISTS \"IsPrepaid\" BOOLEAN DEFAULT FALSE;");
+            context.Database.ExecuteSqlRaw("ALTER TABLE \"Appointments\" ADD COLUMN IF NOT EXISTS \"PrepaidAmount\" DECIMAL DEFAULT 0;");
             
             // Vá bảng Reviews (Thêm AppointmentId và cho phép ServiceId null)
             context.Database.ExecuteSqlRaw("ALTER TABLE \"Reviews\" ADD COLUMN IF NOT EXISTS \"AppointmentId\" INTEGER;");

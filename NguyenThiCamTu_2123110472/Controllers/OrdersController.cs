@@ -208,8 +208,8 @@ namespace NguyenThiCamTu_2123110472.Controllers
             
             _context.Orders.Add(order);
 
-            // Quy đổi điểm thưởng: 10,000đ = 1 điểm
-            int earnedPoints = (int)(total / 10000);
+            // Quy đổi điểm thưởng: 100,000đ = 1 điểm
+            int earnedPoints = (int)(total / 100000);
             if (earnedPoints > 0)
             {
                 var lp = await _context.LoyaltyPoints.FirstOrDefaultAsync(x => x.CustomerId == order.CustomerId);
