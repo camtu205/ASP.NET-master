@@ -154,13 +154,11 @@ namespace NguyenThiCamTu_2123110472.Controllers
 
                 if (promo != null && promo.StartDate <= DateTime.Now && promo.EndDate >= DateTime.Now)
                 {
-                    // 1. Kiểm tra số lần sử dụng
                     if (promo.MaxUsage.HasValue && promo.Orders.Count >= promo.MaxUsage.Value)
                     {
                         return BadRequest("Khuyến mãi đã hết lượt sử dụng.");
                     }
 
-                    // 2. Tính tiền được giảm dựa trên các dịch vụ áp dụng
                     decimal discountableAmount = 0;
                     var appIds = (promo.ApplicableServiceIds ?? "ALL").ToUpper();
 
@@ -169,10 +167,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
                         if (od.ServiceId.HasValue)
                         {
                             bool isApplicable = appIds == "ALL" || appIds.Contains($",{od.ServiceId},");
-                            if (isApplicable)
-                            {
-                                discountableAmount += od.Price * od.Quantity;
-                            }
+                            if (isApplicable) discountableAmount += od.Price * od.Quantity;
                         }
                     }
 
@@ -181,6 +176,21 @@ namespace NguyenThiCamTu_2123110472.Controllers
                         decimal discount = discountableAmount * (promo.DiscountPercent / 100);
                         total -= discount;
                     }
+                }
+            }
+
+            // 4. Apply Rank Discount
+            var customerForRank = await _context.Customers.FindAsync(customerId);
+            if (customerForRank != null)
+            {
+                decimal rankDiscountPct = 0;
+                if (customerForRank.Rank == "Silver") rankDiscountPct = 0.05m;
+                else if (customerForRank.Rank == "Gold") rankDiscountPct = 0.10m;
+                else if (customerForRank.Rank == "Platinum") rankDiscountPct = 0.15m;
+
+                if (rankDiscountPct > 0)
+                {
+                    total -= total * rankDiscountPct;
                 }
             }
 
@@ -212,6 +222,16 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 {
                     lp.Points += earnedPoints;
                     lp.UpdatedDate = DateTime.UtcNow;
+                }
+
+                // Cập nhật Rank dựa trên điểm tích lũy
+                var cust = await _context.Customers.FindAsync(order.CustomerId);
+                if (cust != null)
+                {
+                    if (lp.Points >= 5000) cust.Rank = "Platinum";
+                    else if (lp.Points >= 2000) cust.Rank = "Gold";
+                    else if (lp.Points >= 500) cust.Rank = "Silver";
+                    else cust.Rank = "Standard";
                 }
             }
 

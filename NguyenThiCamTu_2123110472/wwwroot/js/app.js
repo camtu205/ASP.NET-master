@@ -416,7 +416,13 @@ const renderers = {
         `;
     },
 
-    customers: () => renderers.commonList('customer', 'Khách hàng', '/Customers', ['ID', 'Họ tên', 'SĐT', 'Email'], i => `<td>#${i.id}</td><td><strong>${i.fullName}</strong></td><td>${i.phoneNumber}</td><td>${i.email || ''}</td>`),
+    customers: () => renderers.commonList('customer', 'Khách hàng', '/Customers', ['ID', 'Họ tên', 'SĐT', 'Hạng', 'Email'], i => `
+        <td>#${i.id}</td>
+        <td><strong>${i.fullName}</strong></td>
+        <td>${i.phoneNumber}</td>
+        <td><span class="badge badge-${(i.rank || 'Standard').toLowerCase()}">${i.rank || 'Standard'}</span></td>
+        <td>${i.email || ''}</td>
+    `),
     
     staffs: () => renderers.commonList('staff', 'Nhân viên', '/Staffs', ['ID', 'Họ tên', 'SĐT', 'Vị trí', 'Email'], i => `<td>#${i.id}</td><td><strong>${i.fullName}</strong></td><td>${i.phoneNumber}</td><td>${i.position || ''}</td><td>${i.email || ''}</td>`),
     
@@ -856,23 +862,41 @@ window.showQuickCheckoutModal = async (id) => {
     const totalBeforePromo = app.appointmentDetails.reduce((sum, d) => sum + d.price * d.quantity, 0);
     const multiplier = app.bed?.room?.roomType?.priceMultiplier || 1.0;
     const roomName = app.bed?.room?.roomType?.name || "Thường";
+    const rank = app.customer?.rank || "Standard";
+    let rankDiscountRate = 0;
+    if (rank === "Silver") rankDiscountRate = 0.05;
+    else if (rank === "Gold") rankDiscountRate = 0.10;
+    else if (rank === "Platinum") rankDiscountRate = 0.15;
+
+    const baseTotal = totalBeforePromo * multiplier;
+    const rankDiscountAmount = baseTotal * rankDiscountRate;
 
     fields.innerHTML = `
         <div class="billing-summary" style="padding: 15px; background: rgba(244, 114, 182, 0.05); border-radius: 12px; margin-bottom: 20px;">
-            <h4 style="margin-bottom: 10px; color: var(--primary);">Dịch vụ đã sử dụng:</h4>
+            <h4 style="margin-bottom: 10px; color: var(--primary);">Tóm tắt thanh toán:</h4>
             ${app.appointmentDetails.map(d => `
-                <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 5px;">
-                    <span>${d.service?.name} ${multiplier !== 1 ? `(<small style="color:var(--primary)">x${multiplier}</small>)` : ''}</span>
+                <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px;">
+                    <span>${d.service?.name} ${multiplier !== 1 ? `(<small>x${multiplier}</small>)` : ''}</span>
                     <strong>${(d.price * multiplier).toLocaleString()}đ</strong>
                 </div>
             `).join('')}
-            <div style="border-top: 1px dashed #ddd; margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between; font-weight: 700;">
+            <div style="border-top: 1px dashed #ddd; margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between; font-size: 0.9rem;">
                 <span>Tạm tính:</span>
-                <span id="label-total">${(totalBeforePromo * multiplier).toLocaleString()}đ</span>
+                <span>${baseTotal.toLocaleString()}đ</span>
+            </div>
+            ${rankDiscountAmount > 0 ? `
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: #10B981;">
+                <span>Ưu đãi hạng ${rank}:</span>
+                <span>-${rankDiscountAmount.toLocaleString()}đ</span>
+            </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 1.1rem; margin-top: 5px; color: var(--primary);">
+                <span>Tổng cộng:</span>
+                <span id="label-total">${(baseTotal - rankDiscountAmount).toLocaleString()}đ</span>
             </div>
         </div>
         <div class="input-group">
-            <label>Áp dụng mã giảm giá</label>
+            <label>Áp dụng mã giảm giá (Cộng dồn)</label>
             <select id="quick-promo">
                 <option value="">-- Không sử dụng --</option>
                 ${promos.map(p => `<option value="${p.id}">${p.name} (-${p.discountPercent}%)</option>`).join('')}
@@ -890,12 +914,12 @@ window.showQuickCheckoutModal = async (id) => {
     
     document.getElementById('quick-promo').onchange = (e) => {
         const promo = promos.find(p => p.id == e.target.value);
-        const baseTotal = totalBeforePromo * multiplier;
+        const finalBase = baseTotal - rankDiscountAmount;
         if (promo) {
-            const discount = baseTotal * (promo.discountPercent / 100);
-            document.getElementById('label-total').textContent = `${(baseTotal - discount).toLocaleString()}đ (Đã giảm)`;
+            const discount = finalBase * (promo.discountPercent / 100);
+            document.getElementById('label-total').textContent = `${(finalBase - discount).toLocaleString()}đ`;
         } else {
-            document.getElementById('label-total').textContent = `${baseTotal.toLocaleString()}đ`;
+            document.getElementById('label-total').textContent = `${finalBase.toLocaleString()}đ`;
         }
     };
 

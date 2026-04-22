@@ -40,6 +40,7 @@ const Navbar = () => {
     { name: 'Services', path: '/services' },
     { name: 'Products', path: '/products' },
     { name: 'History', path: '/history' },
+    { name: 'Profile', path: '/profile' },
   ];
 
   return (
@@ -70,7 +71,12 @@ const Navbar = () => {
           
           {currentUser ? (
             <div className="flex items-center gap-4 ml-4">
-              <span className="text-sm font-bold text-[#064e3b]">Hi, {currentUser.username}</span>
+              <Link to="/profile" className="flex items-center gap-2 group">
+                  <div className="w-8 h-8 rounded-full bg-[#d4af37] flex items-center justify-center text-[#064e3b] font-bold group-hover:scale-110 transition-transform">
+                      {currentUser.username.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm font-bold text-[#064e3b] group-hover:text-[#d4af37]">Account</span>
+              </Link>
               <button onClick={handleLogout} className="text-xs uppercase tracking-wider font-bold text-red-500 hover:text-red-700">Logout</button>
             </div>
           ) : (

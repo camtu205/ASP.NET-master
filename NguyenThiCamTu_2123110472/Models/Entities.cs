@@ -66,6 +66,7 @@ namespace NguyenThiCamTu_2123110472.Models
         [JsonIgnore]
         public ICollection<CustomerTreatment> CustomerTreatments { get; set; } = new List<CustomerTreatment>();
         public LoyaltyPoint? LoyaltyPoint { get; set; }
+        public string Rank { get; set; } = "Standard"; // Standard, Silver, Gold, Platinum
     }
 
     public class Service

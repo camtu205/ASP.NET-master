@@ -65,3 +65,10 @@ export const submitReview = (reviewData) => apiFetch('/Reviews', {
   method: 'POST',
   body: JSON.stringify(reviewData),
 });
+
+export const getCustomer = (id) => apiFetch(`/Customers/${id}`);
+
+export const updateCustomer = (id, data) => apiFetch(`/Customers/${id}`, {
+  method: 'PUT',
+  body: JSON.stringify(data),
+});
