@@ -78,8 +78,8 @@ async function handleLogin(e) {
     e.preventDefault();
     try {
         const result = await apiCall('/Auth/Login', 'POST', { 
-            username: e.target.username.value, 
-            password: e.target.password.value 
+            username: document.getElementById('username').value, 
+            password: document.getElementById('password').value 
         });
         state.token = result.Token;
         localStorage.setItem('crm_token', state.token);
@@ -93,9 +93,9 @@ async function handleRegister(e) {
     e.preventDefault();
     try {
         await apiCall('/Auth/Register', 'POST', { 
-            username: e.target.username.value, 
-            password: e.target.password.value,
-            role: e.target.role.value
+            username: document.getElementById('username').value, 
+            password: document.getElementById('password').value,
+            role: document.getElementById('role').value
         });
         showToast('Đăng ký thành công! Vui lòng đăng nhập.');
         switchAuthTab('login');
