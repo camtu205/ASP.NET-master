@@ -1,0 +1,7 @@
+{
+  "name": "spa-root",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "cd SpaCustomerWeb && npm install && npm run build"
+  }
+}

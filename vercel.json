@@ -1,8 +1,10 @@
 {
+  "framework": "vite",
+  "outputDirectory": "SpaCustomerWeb/dist",
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "/SpaCustomerWeb/index.html"
+      "destination": "/index.html"
     }
   ]
 }
