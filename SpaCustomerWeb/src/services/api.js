@@ -47,3 +47,14 @@ export const bookAppointment = (data) => apiFetch('/Appointments/Book', {
   method: 'POST',
   body: JSON.stringify(data),
 });
+
+export const getMyAppointments = (customerId) => apiFetch(`/Appointments/MyAppointments?customerId=${customerId}`);
+
+export const updateAppointment = (id, data) => apiFetch(`/Appointments/${id}`, {
+  method: 'PUT',
+  body: JSON.stringify(data),
+});
+
+export const cancelAppointment = (id) => apiFetch(`/Appointments/${id}`, {
+  method: 'DELETE',
+});

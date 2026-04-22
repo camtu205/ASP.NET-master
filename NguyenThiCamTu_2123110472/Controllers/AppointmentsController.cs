@@ -55,6 +55,18 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 .OrderByDescending(a => a.AppointmentDate)
                 .ToListAsync();
         }
+ 
+        [HttpGet("MyAppointments")]
+        public async Task<ActionResult<IEnumerable<Appointment>>> GetMyAppointments(int customerId)
+        {
+            return await _context.Appointments
+                .Where(a => a.CustomerId == customerId && a.Status != "Deleted")
+                .Include(a => a.Staff)
+                .Include(a => a.Bed).ThenInclude(b => b!.Room).ThenInclude(r => r!.RoomType)
+                .Include(a => a.AppointmentDetails).ThenInclude(ad => ad.Service)
+                .OrderByDescending(a => a.AppointmentDate)
+                .ToListAsync();
+        }
 
         [HttpGet("{id}/AvailableBeds")]
         public async Task<ActionResult<IEnumerable<Bed>>> GetAvailableBeds(int id)

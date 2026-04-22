@@ -16,7 +16,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getServices, getStaffs, getRoomTypes, getProducts, bookAppointment } from '../services/api';
+import { getServices, getStaffs, getRoomTypes, getProducts, bookAppointment, updateAppointment } from '../services/api';
 
 const steps = [
   { id: 1, title: 'Services' },
@@ -29,7 +29,8 @@ const steps = [
 const Booking = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const initialServices = location.state?.selectedServices || [];
+  const editApp = location.state?.edit || null;
+  const isEdit = !!editApp;
 
   const [step, setStep] = useState(1);
   const [services, setServices] = useState([]);
@@ -48,6 +49,19 @@ const Booking = () => {
   const [submitting, setSubmitting] = useState(false);
   const [isBooked, setIsBooked] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    if (editApp) {
+      if (editApp.appointmentDetails) {
+        setSelectedServices(editApp.appointmentDetails.map(d => d.service).filter(s => s));
+      }
+      setSelectedStaff(editApp.staff);
+      setSelectedRoomType(editApp.bed?.room?.roomType);
+      const dt = new Date(editApp.appointmentDate);
+      setSelectedDate(dt.toISOString().split('T')[0]);
+      setSelectedTime(dt.toTimeString().split(' ')[0].substring(0, 5));
+    }
+  }, [editApp]);
   
   const showValidationMessage = (msg) => {
     setErrorMessage(msg);
@@ -127,16 +141,23 @@ const Booking = () => {
     setSubmitting(true);
     try {
       const dateTime = new Date(`${selectedDate}T${selectedTime}`);
-      await bookAppointment({
+      const payload = {
         customerId: parseInt(custId), 
         appointmentDate: dateTime.toISOString(),
         serviceIds: selectedServices.map(s => s.id),
         staffId: selectedStaff?.id || null,
         bedId: selectedRoomType ? 1 : null // Mocking bed for now
-      });
+      };
+
+      if (isEdit) {
+        await updateAppointment(editApp.id, payload);
+      } else {
+        await bookAppointment(payload);
+      }
+      
       setIsBooked(true);
     } catch (err) {
-      showValidationMessage('Đặt lịch thất bại: ' + err.message);
+      showValidationMessage('Thao tác thất bại: ' + err.message);
     } finally {
       setSubmitting(false);
     }
@@ -177,9 +198,13 @@ const Booking = () => {
         <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-8">
           <CheckCircle size={48} />
         </div>
-        <h2 className="text-4xl font-serif mb-4">Đặt lịch thành công!</h2>
-        <p className="text-[#475569] mb-10 leading-relaxed">Không gian thư giãn của bạn đã sẵn sàng. Chúng tôi rất mong được đón tiếp bạn.</p>
-        <button onClick={() => navigate('/')} className="btn-primary px-12 py-4">Về trang chủ</button>
+        <h2 className="text-4xl font-serif mb-4">{isEdit ? 'Cập nhật thành công!' : 'Đặt lịch thành công!'}</h2>
+        <p className="text-[#475569] mb-10 leading-relaxed">
+            {isEdit ? 'Thay đổi của bạn đã được ghi nhận.' : 'Không gian thư giãn của bạn đã sẵn sàng. Chúng tôi rất mong được đón tiếp bạn.'}
+        </p>
+        <button onClick={() => navigate(isEdit ? '/history' : '/')} className="btn-primary px-12 py-4">
+            {isEdit ? 'Quay lại lịch sử' : 'Về trang chủ'}
+        </button>
       </motion.div>
     </div>
   );

@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Services from './pages/Services';
 import Products from './pages/Products';
 import Booking from './pages/Booking';
+import BookingHistory from './pages/BookingHistory';
 import Login from './pages/Login';
 import Register from './pages/Register';
 
@@ -19,6 +20,7 @@ function App() {
             <Route path="/services" element={<Services />} />
             <Route path="/products" element={<Products />} />
             <Route path="/booking" element={<Booking />} />
+            <Route path="/history" element={<BookingHistory />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
           </Routes>
