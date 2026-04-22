@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NguyenThiCamTu_2123110472.Data;
 using NguyenThiCamTu_2123110472.Models;
+using NguyenThiCamTu_2123110472.Services;
 
 namespace NguyenThiCamTu_2123110472.Controllers
 {
@@ -12,10 +13,12 @@ namespace NguyenThiCamTu_2123110472.Controllers
     public class OrdersController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly VnPayService _vnpayService;
 
-        public OrdersController(AppDbContext context)
+        public OrdersController(AppDbContext context, VnPayService vnpayService)
         {
             _context = context;
+            _vnpayService = vnpayService;
         }
 
         [HttpGet]
@@ -202,11 +205,19 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 PaymentMethod = request.PaymentMethod,
                 Amount = total,
                 PaymentDate = DateTime.Now,
-                Status = "Completed"
+                Status = request.PaymentMethod == "VNPAY" ? "Pending" : "Completed"
             };
             order.Payments.Add(payment);
             
             _context.Orders.Add(order);
+            await _context.SaveChangesAsync();
+
+            string? paymentUrl = null;
+            if (request.PaymentMethod == "VNPAY")
+            {
+                var ipAddr = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
+                paymentUrl = _vnpayService.CreatePaymentUrl(order.Id, total, ipAddr, $"Thanh toan don hang #{order.Id}");
+            }
 
             // Quy đổi điểm thưởng: 100,000đ = 1 điểm
             int earnedPoints = (int)(total / 100000);
@@ -246,7 +257,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
 
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetOrder", new { id = order.Id }, order);
+            return Ok(new { order, paymentUrl });
         }
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]

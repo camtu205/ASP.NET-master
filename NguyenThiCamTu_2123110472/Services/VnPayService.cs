@@ -29,7 +29,7 @@ namespace NguyenThiCamTu_2123110472.Services
             vnpay.AddRequestData("vnp_Locale", "vn");
             vnpay.AddRequestData("vnp_OrderInfo", orderInfo);
             vnpay.AddRequestData("vnp_OrderType", "other");
-            vnpay.AddRequestData("vnp_ReturnUrl", "https://asp-net-master.vercel.app/payment-status"); // Adjust to customer web domain
+            vnpay.AddRequestData("vnp_ReturnUrl", "https://asp-net-master.onrender.com/api/Payment/VnPayReturn"); // Go to backend first
             vnpay.AddRequestData("vnp_TxnRef", orderId.ToString());
 
             return vnpay.CreateRequestUrl(_vnpUrl, _hashSecret);
