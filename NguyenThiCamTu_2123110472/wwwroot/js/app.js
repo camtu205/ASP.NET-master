@@ -1215,11 +1215,17 @@ document.getElementById('btn-notifications')?.addEventListener('click', () => {
 });
 
 window.viewNotificationDetail = async (type, id, notifId) => {
-    if (!type || !id) return;
-    
-    // Mark this specific one as read
+    // Mark as read first
     try { await apiCall(`/Notifications/${notifId}/read`, 'POST'); } catch(e) {}
     await pollNotifications();
+
+    // Handle string "null" or missing values
+    if (!type || type === 'null' || type === 'undefined' || !id || id === 'null') {
+        state.activeSection = 'notifications';
+        document.getElementById('section-title').textContent = 'Thông báo';
+        await renderers.notifications();
+        return;
+    }
 
     if (type === 'Appointment') {
         state.activeSection = 'appointments';

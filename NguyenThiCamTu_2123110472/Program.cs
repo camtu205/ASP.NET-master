@@ -182,6 +182,11 @@ using (var scope = app.Services.CreateScope())
         // Also try to add columns if table exists but without them
         trySql("ALTER TABLE \"Notifications\" ADD COLUMN IF NOT EXISTS \"TargetType\" VARCHAR(50);");
         trySql("ALTER TABLE \"Notifications\" ADD COLUMN IF NOT EXISTS \"TargetId\" INTEGER;");
+        
+        // Link old notifications to appointments based on message
+        trySql(@"UPDATE ""Notifications"" SET ""TargetType"" = 'Appointment', 
+                 ""TargetId"" = CAST(SUBSTRING(""Message"" FROM '#([0-9]+)') AS INTEGER) 
+                 WHERE ""Message"" LIKE '%#%' AND ""TargetType"" IS NULL;");
 
 
 
