@@ -78,6 +78,25 @@ async function apiCall(endpoint, method = 'GET', body = null, retries = 2) {
     }
 }
 
+async function uploadFile(file) {
+    if (!file) return null;
+    const fd = new FormData();
+    fd.append('file', file);
+    
+    const headers = {};
+    if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
+    
+    const response = await fetch(`${API_BASE}/Uploads`, {
+        method: 'POST',
+        headers,
+        body: fd
+    });
+    
+    if (!response.ok) throw new Error('Lỗi tải ảnh lên');
+    const result = await response.json();
+    return result.url;
+}
+
 // --- Auth ---
 let isSubmitting = false;
 async function handleLogin(e) {
@@ -286,12 +305,22 @@ async function openCRUDModal(type, id = null) {
             <div class="input-group"><label>Tên dịch vụ</label><input type="text" name="name" value="${data.name}" placeholder="Tên dịch vụ..."></div>
             <div class="input-group"><label>Giá (VNĐ)</label><input type="number" name="price" value="${data.price}"></div>
             <div class="input-group"><label>Thời gian (phút)</label><input type="number" name="duration" value="${data.durationMinutes}"></div>
+            <div class="input-group">
+                <label>Hình ảnh</label>
+                ${data.imageUrl ? `<img src="${data.imageUrl}" style="width:100px; height:100px; object-fit:cover; border-radius:8px; margin-bottom:10px; border:1px solid #ddd">` : ''}
+                <input type="file" name="imageFile" accept="image/*">
+            </div>
         `;
     } else if (type === 'product') {
         html += `
             <div class="input-group"><label>Tên sản phẩm</label><input type="text" name="name" value="${data.name}"></div>
             <div class="input-group"><label>Giá (VNĐ)</label><input type="number" name="price" value="${data.price}"></div>
             <div class="input-group"><label>Tồn kho</label><input type="number" name="stock" value="${data.stockQuantity}"></div>
+            <div class="input-group">
+                <label>Hình ảnh</label>
+                ${data.imageUrl ? `<img src="${data.imageUrl}" style="width:100px; height:100px; object-fit:cover; border-radius:8px; margin-bottom:10px; border:1px solid #ddd">` : ''}
+                <input type="file" name="imageFile" accept="image/*">
+            </div>
         `;
     } else if (type === 'promotion') {
         const services = await apiCall('/Services');
@@ -371,8 +400,19 @@ async function openCRUDModal(type, id = null) {
     form.onsubmit = async (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
-        let body = isEdit ? { id: data.id } : {};
+        let body = isEdit ? { id: data.id, imageUrl: data.imageUrl } : { imageUrl: null };
         
+        // Handle File Upload
+        const file = fd.get('imageFile');
+        if (file && file.size > 0) {
+            try {
+                showToast('Đang tải ảnh lên...', 'info');
+                body.imageUrl = await uploadFile(file);
+            } catch (err) {
+                return showToast('Lỗi tải ảnh!', 'error');
+            }
+        }
+
         if (type === 'customer') body = {...body, fullName: fd.get('fullName'), phoneNumber: fd.get('phoneNumber'), email: fd.get('email')};
         if (type === 'staff') body = {...body, fullName: fd.get('fullName'), phoneNumber: fd.get('phoneNumber'), position: fd.get('position'), email: fd.get('email')};
         if (type === 'service') body = {...body, name: fd.get('name'), price: parseFloat(fd.get('price')), durationMinutes: parseInt(fd.get('duration'))};
@@ -464,9 +504,21 @@ const renderers = {
     
     staffs: () => renderers.commonList('staff', 'Nhân viên', '/Staffs', ['ID', 'Họ tên', 'SĐT', 'Vị trí', 'Email'], i => `<td>#${i.id}</td><td><strong>${i.fullName}</strong></td><td>${i.phoneNumber}</td><td>${i.position || ''}</td><td>${i.email || ''}</td>`),
     
-    services: () => renderers.commonList('service', 'Dịch vụ', '/Services', ['ID', 'Tên dịch vụ', 'Giá', 'Thời gian'], i => `<td>#${i.id}</td><td><strong>${i.name}</strong></td><td>${i.price.toLocaleString()}đ</td><td>${i.durationMinutes} phút</td>`),
+    services: () => renderers.commonList('service', 'Dịch vụ', '/Services', ['ID', 'Ảnh', 'Tên dịch vụ', 'Giá', 'Thời gian'], i => `
+        <td>#${i.id}</td>
+        <td><img src="${i.imageUrl || 'https://via.placeholder.com/50'}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #eee"></td>
+        <td><strong>${i.name}</strong></td>
+        <td>${i.price.toLocaleString()}đ</td>
+        <td>${i.durationMinutes} phút</td>
+    `),
     
-    products: () => renderers.commonList('product', 'Sản phẩm', '/Product', ['ID', 'Tên sản phẩm', 'Giá', 'Tồn kho'], i => `<td>#${i.id}</td><td><strong>${i.name}</strong></td><td>${i.price.toLocaleString()}đ</td><td>${i.stockQuantity}</td>`),
+    products: () => renderers.commonList('product', 'Sản phẩm', '/Product', ['ID', 'Ảnh', 'Tên sản phẩm', 'Giá', 'Tồn kho'], i => `
+        <td>#${i.id}</td>
+        <td><img src="${i.imageUrl || 'https://via.placeholder.com/50'}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #eee"></td>
+        <td><strong>${i.name}</strong></td>
+        <td>${i.price.toLocaleString()}đ</td>
+        <td>${i.stockQuantity}</td>
+    `),
     
     promotions: () => renderers.commonList('promotion', 'Khuyến mãi', '/Promotions', ['ID', 'Tên CTKM', 'Giảm %', 'Áp dụng', 'Lượt dùng', 'Thời hạn'], i => `
         <td>#${i.id}</td>

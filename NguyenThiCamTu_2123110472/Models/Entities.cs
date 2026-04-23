@@ -86,6 +86,7 @@ namespace NguyenThiCamTu_2123110472.Models
 
         [Range(1, int.MaxValue, ErrorMessage = "Thời gian phải lớn hơn 0.")]
         public int DurationMinutes { get; set; }
+        public string? ImageUrl { get; set; }
 
         public int? CategoryId { get; set; }
         [ForeignKey("CategoryId")]
@@ -116,6 +117,7 @@ namespace NguyenThiCamTu_2123110472.Models
 
         [Range(0, int.MaxValue, ErrorMessage = "Số lượng tồn kho không được nhỏ hơn 0.")]
         public int StockQuantity { get; set; }
+        public string? ImageUrl { get; set; }
 
         public ICollection<OrderDetail> OrderDetails { get; set; } = new List<OrderDetail>();
     }
