@@ -77,6 +77,11 @@ export const getMyOrders = (customerId) => apiFetch(`/Orders/MyOrders?customerId
 
 export const getProfile = () => apiFetch('/Auth/Profile');
 
+export const getNotifications = () => apiFetch('/Notifications');
+export const markAllNotificationsRead = () => apiFetch('/Notifications/read-all', {
+  method: 'POST',
+});
+
 export const api = {
   getNotifications,
   markAllNotificationsRead,
