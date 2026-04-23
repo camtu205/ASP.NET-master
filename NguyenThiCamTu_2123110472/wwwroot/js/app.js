@@ -506,7 +506,7 @@ const renderers = {
     
     services: () => renderers.commonList('service', 'Dịch vụ', '/Services', ['ID', 'Ảnh', 'Tên dịch vụ', 'Giá', 'Thời gian'], i => `
         <td>#${i.id}</td>
-        <td><img src="${i.imageUrl || 'https://via.placeholder.com/50'}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #eee"></td>
+        <td><img src="${i.imageUrl || 'https://placehold.co/50'}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #eee"></td>
         <td><strong>${i.name}</strong></td>
         <td>${i.price.toLocaleString()}đ</td>
         <td>${i.durationMinutes} phút</td>
@@ -514,7 +514,7 @@ const renderers = {
     
     products: () => renderers.commonList('product', 'Sản phẩm', '/Product', ['ID', 'Ảnh', 'Tên sản phẩm', 'Giá', 'Tồn kho'], i => `
         <td>#${i.id}</td>
-        <td><img src="${i.imageUrl || 'https://via.placeholder.com/50'}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #eee"></td>
+        <td><img src="${i.imageUrl || 'https://placehold.co/50'}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #eee"></td>
         <td><strong>${i.name}</strong></td>
         <td>${i.price.toLocaleString()}đ</td>
         <td>${i.stockQuantity}</td>
