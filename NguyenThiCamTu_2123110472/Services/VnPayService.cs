@@ -15,25 +15,35 @@ namespace NguyenThiCamTu_2123110472.Services
         private string _hashSecret = "YT2OD3QPCJK0M1Q2LWF6U3WHHFCIQ8PV";
         private string _vnpUrl = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html"; // Sandbox URL
 
-        public string CreatePaymentUrl(int orderId, decimal amount, string ipAddress, string orderInfo = "Prepayment Booking")
+        public string CreatePaymentUrl(HttpContext context, PaymentInformationModel model)
         {
+            var ipAddress = context.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
             var vnpay = new VnPayLibrary();
 
             vnpay.AddRequestData("vnp_Version", "2.1.0");
             vnpay.AddRequestData("vnp_Command", "pay");
             vnpay.AddRequestData("vnp_TmnCode", _tmnCode);
-            vnpay.AddRequestData("vnp_Amount", ((long)(amount * 100)).ToString());
+            vnpay.AddRequestData("vnp_Amount", ((long)(model.Amount * 100)).ToString());
             vnpay.AddRequestData("vnp_CreateDate", DateTime.Now.ToString("yyyyMMddHHmmss"));
             vnpay.AddRequestData("vnp_CurrCode", "VND");
             vnpay.AddRequestData("vnp_IpAddr", ipAddress);
             vnpay.AddRequestData("vnp_Locale", "vn");
-            vnpay.AddRequestData("vnp_OrderInfo", orderInfo);
+            vnpay.AddRequestData("vnp_OrderInfo", model.OrderDescription);
             vnpay.AddRequestData("vnp_OrderType", "other");
-            vnpay.AddRequestData("vnp_ReturnUrl", "https://asp-net-master.onrender.com/api/Payment/VnPayReturn"); // Go to backend first
-            vnpay.AddRequestData("vnp_TxnRef", orderId.ToString());
+            vnpay.AddRequestData("vnp_ReturnUrl", "https://asp-net-master.onrender.com/api/Payment/VnPayReturn");
+            vnpay.AddRequestData("vnp_TxnRef", model.OrderId.ToString());
 
             return vnpay.CreateRequestUrl(_vnpUrl, _hashSecret);
         }
+    }
+
+    public class PaymentInformationModel
+    {
+        public string OrderType { get; set; }
+        public double Amount { get; set; }
+        public string OrderDescription { get; set; }
+        public string Name { get; set; }
+        public int OrderId { get; set; }
     }
 
     public class VnPayLibrary

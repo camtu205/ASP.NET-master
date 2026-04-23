@@ -45,6 +45,19 @@ namespace NguyenThiCamTu_2123110472.Controllers
             return order;
         }
 
+        [HttpGet("MyOrders")]
+        public async Task<ActionResult<IEnumerable<Order>>> GetMyOrders(int customerId)
+        {
+            return await _context.Orders
+                .Where(o => o.CustomerId == customerId)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Service)
+                .Include(o => o.OrderDetails)
+                    .ThenInclude(od => od.Product)
+                .OrderByDescending(o => o.OrderDate)
+                .ToListAsync();
+        }
+
         public class CheckoutRequest
         {
             public int? AppointmentId { get; set; }
@@ -66,7 +79,6 @@ namespace NguyenThiCamTu_2123110472.Controllers
                         .ThenInclude(r => r!.RoomType)
                 .FirstOrDefaultAsync(a => a.Id == request.AppointmentId);
 
-            // Get Customer ID
             int customerId = 0;
             if (appointment != null) customerId = appointment.CustomerId;
             else if (request.CustomerId.HasValue) customerId = request.CustomerId.Value;
@@ -81,7 +93,6 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 TotalAmount = 0
             };
 
-            // 1. Determine Room Type Multiplier
             decimal multiplier = 1.0m;
             if (appointment?.Bed?.Room?.RoomType != null)
             {
@@ -95,7 +106,6 @@ namespace NguyenThiCamTu_2123110472.Controllers
 
             decimal total = 0;
 
-            // 2. Add services from appointment (if any)
             if (appointment != null)
             {
                 foreach (var appDetail in appointment.AppointmentDetails)
@@ -104,7 +114,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
                     {
                         ServiceId = appDetail.ServiceId,
                         Quantity = 1,
-                        Price = appDetail.Price * multiplier // Apply multiplier here
+                        Price = appDetail.Price * multiplier
                     };
                     order.OrderDetails.Add(od);
                     total += od.Price * od.Quantity;
@@ -112,7 +122,6 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 if (appointment.Status != "Done") appointment.Status = "Done";
             }
 
-            // 3. Add services selected manually
             foreach (var sId in request.ServiceIds)
             {
                 var service = await _context.Services.FindAsync(sId);
@@ -122,14 +131,13 @@ namespace NguyenThiCamTu_2123110472.Controllers
                     {
                         ServiceId = service.Id,
                         Quantity = 1,
-                        Price = service.Price * multiplier // Apply multiplier here
+                        Price = service.Price * multiplier
                     };
                     order.OrderDetails.Add(od);
                     total += od.Price * od.Quantity;
                 }
             }
 
-            // Products
             foreach (var pId in request.ProductIds)
             {
                 var product = await _context.Products.FindAsync(pId);
@@ -143,148 +151,73 @@ namespace NguyenThiCamTu_2123110472.Controllers
                     };
                     order.OrderDetails.Add(od);
                     total += od.Price * od.Quantity;
-                    
-                    product.StockQuantity -= 1; // Giảm tồn kho
+                    product.StockQuantity -= 1;
                 }
             }
 
-            // Apply Promotion
             if (request.PromotionId.HasValue)
             {
-                var promo = await _context.Promotions
-                    .Include(p => p.Orders)
-                    .FirstOrDefaultAsync(p => p.Id == request.PromotionId.Value);
-
+                var promo = await _context.Promotions.Include(p => p.Orders).FirstOrDefaultAsync(p => p.Id == request.PromotionId.Value);
                 if (promo != null && promo.StartDate <= DateTime.Now && promo.EndDate >= DateTime.Now)
                 {
-                    if (promo.MaxUsage.HasValue && promo.Orders.Count >= promo.MaxUsage.Value)
+                    if (!promo.MaxUsage.HasValue || promo.Orders.Count < promo.MaxUsage.Value)
                     {
-                        return BadRequest("Khuyến mãi đã hết lượt sử dụng.");
-                    }
-
-                    decimal discountableAmount = 0;
-                    var appIds = (promo.ApplicableServiceIds ?? "ALL").ToUpper();
-
-                    foreach (var od in order.OrderDetails)
-                    {
-                        if (od.ServiceId.HasValue)
+                        decimal discountableAmount = 0;
+                        var appIds = (promo.ApplicableServiceIds ?? "ALL").ToUpper();
+                        foreach (var od in order.OrderDetails)
                         {
-                            bool isApplicable = appIds == "ALL" || appIds.Contains($",{od.ServiceId},");
-                            if (isApplicable) discountableAmount += od.Price * od.Quantity;
+                            if (od.ServiceId.HasValue && (appIds == "ALL" || appIds.Contains($",{od.ServiceId},")))
+                                discountableAmount += od.Price * od.Quantity;
                         }
-                    }
-
-                    if (discountableAmount > 0)
-                    {
-                        decimal discount = discountableAmount * (promo.DiscountPercent / 100);
-                        total -= discount;
+                        if (discountableAmount > 0) total -= discountableAmount * (promo.DiscountPercent / 100);
                     }
                 }
             }
 
-            // 4. Apply Rank Discount
             var customerForRank = await _context.Customers.FindAsync(customerId);
             if (customerForRank != null)
             {
-                decimal rankDiscountPct = 0;
-                if (customerForRank.Rank == "Silver") rankDiscountPct = 0.05m;
-                else if (customerForRank.Rank == "Gold") rankDiscountPct = 0.10m;
-                else if (customerForRank.Rank == "Platinum") rankDiscountPct = 0.15m;
-
-                if (rankDiscountPct > 0)
-                {
-                    total -= total * rankDiscountPct;
-                }
+                decimal rankDiscountPct = customerForRank.Rank switch { "Silver" => 0.05m, "Gold" => 0.10m, "Platinum" => 0.15m, _ => 0m };
+                if (rankDiscountPct > 0) total -= total * rankDiscountPct;
             }
 
             order.TotalAmount = total;
-            
-            // Add Payment record
-            var payment = new Payment
-            {
-                PaymentMethod = request.PaymentMethod,
-                Amount = total,
-                PaymentDate = DateTime.Now,
-                Status = request.PaymentMethod == "VNPAY" ? "Pending" : "Completed"
-            };
+            var payment = new Payment { PaymentMethod = request.PaymentMethod, Amount = total, PaymentDate = DateTime.Now, Status = request.PaymentMethod == "VNPAY" ? "Pending" : "Completed" };
             order.Payments.Add(payment);
-            
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
 
             string? paymentUrl = null;
             if (request.PaymentMethod == "VNPAY")
             {
-                var ipAddr = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
-                paymentUrl = _vnpayService.CreatePaymentUrl(order.Id, total, ipAddr, $"Thanh toan don hang #{order.Id}");
+                paymentUrl = _vnpayService.CreatePaymentUrl(HttpContext, new PaymentInformationModel {
+                    OrderId = order.Id, Amount = (double)total, OrderDescription = $"Thanh toan don hang #{order.Id}", OrderType = "order"
+                });
             }
 
-            // Quy đổi điểm thưởng: 100,000đ = 1 điểm
             int earnedPoints = (int)(total / 100000);
             if (earnedPoints > 0)
             {
-                var lp = await _context.LoyaltyPoints.FirstOrDefaultAsync(x => x.CustomerId == order.CustomerId);
-                if (lp == null)
-                {
-                    lp = new LoyaltyPoint { CustomerId = order.CustomerId, Points = earnedPoints, UpdatedDate = DateTime.UtcNow };
-                    _context.LoyaltyPoints.Add(lp);
-                }
-                else
-                {
-                    lp.Points += earnedPoints;
-                    lp.UpdatedDate = DateTime.UtcNow;
-                }
-
-                // Cập nhật Rank dựa trên điểm tích lũy
-                var cust = await _context.Customers.FindAsync(order.CustomerId);
-                if (cust != null)
-                {
-                    if (lp.Points >= 5000) cust.Rank = "Platinum";
-                    else if (lp.Points >= 2000) cust.Rank = "Gold";
-                    else if (lp.Points >= 500) cust.Rank = "Silver";
-                    else cust.Rank = "Standard";
-                }
+                var lp = await _context.LoyaltyPoints.FirstOrDefaultAsync(x => x.CustomerId == customerId);
+                if (lp == null) _context.LoyaltyPoints.Add(new LoyaltyPoint { CustomerId = customerId, Points = earnedPoints, UpdatedDate = DateTime.UtcNow });
+                else { lp.Points += earnedPoints; lp.UpdatedDate = DateTime.UtcNow; }
+                var cust = await _context.Customers.FindAsync(customerId);
+                if (cust != null) cust.Rank = lp?.Points >= 5000 ? "Platinum" : lp?.Points >= 2000 ? "Gold" : lp?.Points >= 500 ? "Silver" : "Standard";
             }
 
-            // Thông báo thanh toán thành công
-            _context.Notifications.Add(new Notification
-            {
-                Title = "Thanh toán thành công",
-                Message = $"Hóa đơn #{order.Id} trị giá {total:N0}đ đã được thanh toán. Khách hàng nhận được {earnedPoints} điểm thưởng.",
-                CreatedDate = DateTime.UtcNow,
-                UserId = 1,
-                TargetType = "Order",
-                TargetId = order.Id
-            });
-
-            // Notify Admin
+            _context.Notifications.Add(new Notification { Title = "Thanh toán thành công", Message = $"Hóa đơn #{order.Id} trị giá {total:N0}đ đã được thanh toán.", CreatedDate = DateTime.UtcNow, UserId = 1, TargetType = "Order", TargetId = order.Id });
             var customer = await _context.Customers.FindAsync(customerId);
-            await AppDbContext.CreateNotification(_context, "Đơn hàng mới", $"Khách hàng {customer?.FullName} đã thanh toán đơn #{order.Id}: {total:N0}đ.", 1, "Order", order.Id);
+            await AppDbContext.CreateNotification(_context, "Đơn hàng mới", $"Khách hàng {customer?.FullName} đã thanh toán đơn #{order.Id}.", 1, "Order", order.Id);
             return Ok(new { order, paymentUrl });
         }
+
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteOrder(int id)
         {
-            var order = await _context.Orders
-                .Include(o => o.OrderDetails)
-                .FirstOrDefaultAsync(o => o.Id == id);
-
+            var order = await _context.Orders.Include(o => o.OrderDetails).FirstOrDefaultAsync(o => o.Id == id);
             if (order == null) return NotFound();
-
-            // Reverse inventory for products in order
-            foreach (var od in order.OrderDetails)
-            {
-                if (od.ProductId != null)
-                {
-                    var product = await _context.Products.FindAsync(od.ProductId);
-                    if (product != null)
-                    {
-                        product.StockQuantity += od.Quantity;
-                    }
-                }
-            }
-
+            foreach (var od in order.OrderDetails) if (od.ProductId != null) { var product = await _context.Products.FindAsync(od.ProductId); if (product != null) product.StockQuantity += od.Quantity; }
             _context.Orders.Remove(order);
             await _context.SaveChangesAsync();
             return NoContent();

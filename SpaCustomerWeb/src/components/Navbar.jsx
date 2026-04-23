@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, User, Calendar } from 'lucide-react';
+import { Menu, X, User, Calendar, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useCart } from '../context/CartContext';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const { cartItems } = useCart();
   const location = useLocation();
+  const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -65,14 +68,25 @@ const Navbar = () => {
               </Link>
             ))}
           </div>
-          <Link to="/notifications" className="relative p-2 text-[#1e293b] hover:text-[#d4af37] transition-colors">
-            <Calendar size={22} className="hidden" /> {/* Placeholder to keep spacing if needed */}
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
-          </Link>
-          <Link to="/booking" className="btn-primary">
-            <Calendar size={18} />
-            <span>Book Now</span>
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link to="/checkout-product" className="relative p-2 text-[#1e293b] hover:text-[#d4af37] transition-colors group">
+              <ShoppingBag size={24} />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shadow-md animate-bounce">
+                  {cartCount}
+                </span>
+              )}
+            </Link>
+
+            <Link to="/notifications" className="p-2 text-[#1e293b] hover:text-[#d4af37] transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+            </Link>
+
+            <Link to="/booking" className="btn-primary">
+              <Calendar size={18} />
+              <span>Đặt lịch</span>
+            </Link>
+          </div>
           
           {currentUser ? (
             <div className="flex items-center gap-4 ml-4">

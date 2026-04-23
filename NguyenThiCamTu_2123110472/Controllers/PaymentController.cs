@@ -30,10 +30,36 @@ namespace NguyenThiCamTu_2123110472.Controllers
             public string vnp_SecureHash { get; set; }
         }
 
-        public PaymentController(AppDbContext context, VnPayService vnpayService)
+        [HttpPost("CreateProductPayment/{orderId}")]
+        public async Task<IActionResult> CreateProductPayment(int orderId)
         {
-            _context = context;
-            _vnpayService = vnpayService;
+            var order = await _context.Orders
+                .Include(o => o.Customer)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+
+            if (order == null) return NotFound("Không tìm thấy đơn hàng");
+
+            // Create Payment record
+            var payment = new Payment
+            {
+                OrderId = orderId,
+                Amount = order.TotalAmount,
+                PaymentDate = DateTime.Now,
+                PaymentMethod = "VNPay",
+                Status = "Pending"
+            };
+            _context.Payments.Add(payment);
+            await _context.SaveChangesAsync();
+
+            var paymentUrl = _vnpayService.CreatePaymentUrl(HttpContext, new PaymentInformationModel
+            {
+                Amount = (double)order.TotalAmount,
+                OrderDescription = $"Thanh toan don hang #{orderId} - Spa Boutique",
+                OrderType = "product",
+                OrderId = orderId
+            });
+
+            return Ok(new { paymentUrl });
         }
 
         [HttpGet("VnPayReturn")]

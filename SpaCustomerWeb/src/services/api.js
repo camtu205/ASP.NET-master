@@ -73,15 +73,16 @@ export const updateCustomer = (id, data) => apiFetch(`/Customers/${id}`, {
   body: JSON.stringify(data),
 });
 
-export const getNotifications = () => apiFetch('/Notifications');
-export const markAllNotificationsRead = () => apiFetch('/Notifications/read-all', {
-  method: 'POST',
-});
+export const getMyOrders = (customerId) => apiFetch(`/Orders/MyOrders?customerId=${customerId}`);
 
-const api = {
+export const getProfile = () => apiFetch('/Auth/Profile');
+
+export const api = {
   getNotifications,
   markAllNotificationsRead,
-  // add others if needed
+  get: (endpoint) => apiFetch(endpoint),
+  post: (endpoint, data) => apiFetch(endpoint, { method: 'POST', body: JSON.stringify(data) }),
+  put: (endpoint, data) => apiFetch(endpoint, { method: 'PUT', body: JSON.stringify(data) }),
 };
 
 export default api;

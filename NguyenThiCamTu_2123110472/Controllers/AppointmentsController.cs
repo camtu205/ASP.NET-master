@@ -285,8 +285,12 @@ namespace NguyenThiCamTu_2123110472.Controllers
                     Status = "Pending" 
                 });
 
-                var ipAddr = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
-                paymentUrl = _vnpayService.CreatePaymentUrl(order.Id, finalTotal, ipAddr, $"Thanh toan lich hen #{appointment.Id}");
+                paymentUrl = _vnpayService.CreatePaymentUrl(HttpContext, new PaymentInformationModel {
+                    OrderId = order.Id,
+                    Amount = (double)finalTotal,
+                    OrderDescription = $"Thanh toan lich hen #{appointment.Id}",
+                    OrderType = "appointment"
+                });
             }
  
             // Notify Admin

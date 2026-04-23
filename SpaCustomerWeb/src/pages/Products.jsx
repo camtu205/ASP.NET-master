@@ -2,11 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingBag, Star, Loader2, AlertCircle } from 'lucide-react';
 import { getProducts } from '../services/api';
+import { Link } from 'react-router-dom';
+import { useCart } from '../context/CartContext';
+import { toast } from 'react-hot-toast';
 
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { addToCart } = useCart();
+
+  const handleQuickAdd = (e, product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addToCart(product, 1);
+    toast.success(`Đã thêm ${product.name} vào giỏ hàng`);
+  };
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -48,8 +59,8 @@ const Products = () => {
             animate={{ opacity: 1, scale: 1 }}
             className="text-center mb-16"
           >
-            <h1 className="text-5xl font-serif mb-6">Boutique</h1>
-            <p className="text-[#475569] max-w-2xl mx-auto">Bring the spa experience home with our curated collection of organic products.</p>
+            <h1 className="text-5xl font-serif mb-6">Spa Boutique</h1>
+            <p className="text-[#475569] max-w-2xl mx-auto">Nâng tầm trải nghiệm spa tại nhà với bộ sưu tập sản phẩm hữu cơ cao cấp của chúng tôi.</p>
           </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
@@ -62,22 +73,25 @@ const Products = () => {
                 transition={{ delay: idx * 0.1 }}
                 className="group flex flex-col"
               >
-                <div className="relative overflow-hidden rounded-[2.5rem] bg-white shadow-xl mb-8 aspect-[4/5] border border-gray-100">
+                <Link to={`/product/${product.id}`} className="relative overflow-hidden rounded-[2.5rem] bg-white shadow-xl mb-8 aspect-[4/5] border border-gray-100 block">
                   <img src={product.imageUrl || "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=400"} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
                   <div className="absolute inset-0 bg-black/10 group-hover:bg-black/30 transition-all duration-500 opacity-0 group-hover:opacity-100 flex items-end justify-center pb-8 p-4">
-                    <button className="btn-primary w-full justify-center transform translate-y-4 group-hover:translate-y-0 transition-all duration-500 shadow-2xl">
+                    <button 
+                      onClick={(e) => handleQuickAdd(e, product)}
+                      className="btn-primary w-full justify-center transform translate-y-4 group-hover:translate-y-0 transition-all duration-500 shadow-2xl"
+                    >
                       <ShoppingBag size={18} />
-                      Add to Basket
+                      Thêm vào giỏ
                     </button>
                   </div>
-                </div>
+                </Link>
                 <div className="text-center px-2">
-                  <span className="text-xs uppercase tracking-widest text-[#d4af37] font-bold mb-3 block">{product.stockQuantity > 0 ? 'In Stock' : 'Out of Stock'}</span>
-                  <h3 className="text-xl font-serif mb-3 leading-tight font-medium">{product.name}</h3>
+                  <span className="text-xs uppercase tracking-widest text-[#d4af37] font-bold mb-3 block">{product.stockQuantity > 0 ? 'Còn hàng' : 'Hết hàng'}</span>
+                  <Link to={`/product/${product.id}`}><h3 className="text-xl font-serif mb-3 leading-tight font-medium hover:text-pink-500 transition-colors">{product.name}</h3></Link>
                   <div className="flex items-center justify-center gap-1.5 mb-3 text-[#d4af37]">
                     {[...Array(5)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
                   </div>
-                  <p className="text-[#064e3b] font-bold text-xl">${product.price}</p>
+                  <p className="text-[#064e3b] font-bold text-xl">{product.price?.toLocaleString()}đ</p>
                 </div>
               </motion.div>
             ))}
