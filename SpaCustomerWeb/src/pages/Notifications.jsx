@@ -42,7 +42,7 @@ const Notifications = () => {
                             <p className="text-gray-700 text-sm">{n.message}</p>
                             {n.targetType === 'Appointment' && (
                                 <button 
-                                    onClick={() => window.location.href = '/booking-history'} 
+                                    onClick={() => window.location.href = '/history'} 
                                     className="mt-3 text-xs font-bold text-pink-500 hover:underline flex items-center gap-1"
                                 >
                                     Xem lịch hẹn của bạn →

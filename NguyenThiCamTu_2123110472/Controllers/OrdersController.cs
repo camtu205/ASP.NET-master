@@ -206,7 +206,24 @@ namespace NguyenThiCamTu_2123110472.Controllers
             }
 
             _context.Notifications.Add(new Notification { Title = "Thanh toán thành công", Message = $"Hóa đơn #{order.Id} trị giá {total:N0}đ đã được thanh toán.", CreatedDate = DateTime.UtcNow, UserId = 1, TargetType = "Order", TargetId = order.Id });
+            
             var customer = await _context.Customers.FindAsync(customerId);
+            if (customer != null && !string.IsNullOrEmpty(customer.Username))
+            {
+                var custUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == customer.Username);
+                if (custUser != null)
+                {
+                    _context.Notifications.Add(new Notification { 
+                        Title = "Thanh toán thành công", 
+                        Message = $"Bạn đã thanh toán đơn hàng #{order.Id} thành công. Cảm ơn bạn đã mua sắm tại Lumina Spa!", 
+                        CreatedDate = DateTime.UtcNow, 
+                        UserId = custUser.Id, 
+                        TargetType = "Order", 
+                        TargetId = order.Id 
+                    });
+                }
+            }
+
             await AppDbContext.CreateNotification(_context, "Đơn hàng mới", $"Khách hàng {customer?.FullName} đã thanh toán đơn #{order.Id}.", 1, "Order", order.Id);
             return Ok(new { order, paymentUrl });
         }

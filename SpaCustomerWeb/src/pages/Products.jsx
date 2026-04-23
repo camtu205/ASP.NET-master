@@ -73,25 +73,35 @@ const Products = () => {
                 transition={{ delay: idx * 0.1 }}
                 className="group flex flex-col"
               >
-                <Link to={`/product/${product.id}`} className="relative overflow-hidden rounded-[2.5rem] bg-white shadow-xl mb-8 aspect-[4/5] border border-gray-100 block">
-                  <img src={product.imageUrl || "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=400"} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
-                  <div className="absolute inset-0 bg-black/10 group-hover:bg-black/30 transition-all duration-500 opacity-0 group-hover:opacity-100 flex items-end justify-center pb-8 p-4">
-                    <button 
-                      onClick={(e) => handleQuickAdd(e, product)}
-                      className="btn-primary w-full justify-center transform translate-y-4 group-hover:translate-y-0 transition-all duration-500 shadow-2xl"
-                    >
-                      <ShoppingBag size={18} />
-                      Thêm vào giỏ
-                    </button>
+                <div className="relative group overflow-hidden rounded-[2.5rem] bg-white shadow-xl mb-6 aspect-[4/5] border border-gray-100">
+                  <Link to={`/product/${product.id}`} className="block w-full h-full">
+                    <img src={product.imageUrl || "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=400"} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
+                  </Link>
+                  
+                  {/* Small cart button in corner */}
+                  <button 
+                    onClick={(e) => handleQuickAdd(e, product)}
+                    className="absolute top-4 right-4 w-12 h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-[#064e3b] shadow-lg hover:bg-pink-500 hover:text-white transition-all duration-300 transform translate-y-[-10px] opacity-0 group-hover:translate-y-0 group-hover:opacity-100 z-10"
+                    title="Thêm vào giỏ"
+                  >
+                    <ShoppingBag size={20} />
+                  </button>
+
+                  <div className="absolute bottom-4 left-4 right-4 pointer-events-none">
+                    <div className="bg-white/80 backdrop-blur-sm px-4 py-2 rounded-2xl inline-block text-[10px] font-bold uppercase tracking-widest text-[#d4af37]">
+                        {product.stockQuantity > 0 ? 'Còn hàng' : 'Hết hàng'}
+                    </div>
                   </div>
-                </Link>
+                </div>
+
                 <div className="text-center px-2">
-                  <span className="text-xs uppercase tracking-widest text-[#d4af37] font-bold mb-3 block">{product.stockQuantity > 0 ? 'Còn hàng' : 'Hết hàng'}</span>
-                  <Link to={`/product/${product.id}`}><h3 className="text-xl font-serif mb-3 leading-tight font-medium hover:text-pink-500 transition-colors">{product.name}</h3></Link>
-                  <div className="flex items-center justify-center gap-1.5 mb-3 text-[#d4af37]">
-                    {[...Array(5)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
+                  <Link to={`/product/${product.id}`}>
+                    <h3 className="text-lg font-serif mb-2 leading-tight font-medium hover:text-pink-500 transition-colors h-14 line-clamp-2">{product.name}</h3>
+                  </Link>
+                  <div className="flex items-center justify-center gap-1 mb-2 text-[#d4af37]">
+                    {[...Array(5)].map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
                   </div>
-                  <p className="text-[#064e3b] font-bold text-xl">{product.price?.toLocaleString()}đ</p>
+                  <p className="text-[#064e3b] font-bold text-lg">{product.price?.toLocaleString()}đ</p>
                 </div>
               </motion.div>
             ))}

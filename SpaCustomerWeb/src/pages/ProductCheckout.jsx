@@ -43,16 +43,16 @@ const ProductCheckout = () => {
             };
 
             // Fetch current customer profile to get ID
-            const profileRes = await api.get('/Auth/Profile');
-            const customerRes = await api.get('/Customers');
-            const customer = customerRes.data.find(c => c.username === profileRes.data.username);
+            const profile = await api.get('/Auth/Profile');
+            const customers = await api.get('/Customers');
+            const customer = customers.find(c => c.username === profile.username);
             
             if (!customer) throw new Error("Vui lòng đăng nhập để mua hàng");
 
             orderPayload.customerId = customer.id;
 
             const response = await api.post('/Orders', orderPayload);
-            const orderId = response.data.id;
+            const orderId = response.id; // Corrected from response.data.id
 
             // 2. Initiate Payment (VNPay)
             const paymentRes = await api.post(`/Payment/CreateProductPayment/${orderId}`, {
@@ -60,13 +60,13 @@ const ProductCheckout = () => {
                 orderInfo: `Thanh toan don hang #${orderId} - Spa Boutique`
             });
 
-            if (paymentRes.data.paymentUrl) {
+            if (paymentRes.paymentUrl) { // Corrected from paymentRes.data.paymentUrl
                 clearCart();
-                window.location.href = paymentRes.data.paymentUrl;
+                window.location.href = paymentRes.paymentUrl;
             } else {
                 toast.success("Đặt hàng thành công!");
                 clearCart();
-                navigate('/booking-history');
+                navigate('/history'); // Corrected from /booking-history
             }
         } catch (err) {
             toast.error(err.response?.data || "Lỗi khi xử lý đơn hàng");

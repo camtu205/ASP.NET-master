@@ -17,8 +17,8 @@ const ProductDetail = () => {
     useEffect(() => {
         const fetchProduct = async () => {
             try {
-                const response = await api.get(`/Product/${id}`);
-                setProduct(response.data);
+                const data = await api.get(`/Product/${id}`);
+                setProduct(data);
             } catch (err) {
                 toast.error("Không thể tải thông tin sản phẩm");
                 navigate('/products');

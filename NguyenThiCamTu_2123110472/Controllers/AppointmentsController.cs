@@ -298,6 +298,17 @@ namespace NguyenThiCamTu_2123110472.Controllers
             await AppDbContext.CreateNotification(_context, request.IsPrepaid ? "Yêu cầu thanh toán trước" : "Lịch hẹn mới", 
                 $"{(request.IsPrepaid ? "[CHỜ THANH TOÁN] " : "")}Lịch hẹn: {customer?.FullName} vào {request.AppointmentDate:dd/MM/yyyy HH:mm}.", 1, "Appointment", appointment.Id);
 
+            // Notify Customer
+            if (customer != null && !string.IsNullOrEmpty(customer.Username))
+            {
+                var custUser = await _context.Users.FirstOrDefaultAsync(u => u.Username == customer.Username);
+                if (custUser != null)
+                {
+                    await AppDbContext.CreateNotification(_context, "Đặt lịch thành công", 
+                        $"Bạn đã đặt lịch hẹn vào {request.AppointmentDate:dd/MM/yyyy HH:mm}. Vui lòng chờ nhân viên xác nhận.", custUser.Id, "Appointment", appointment.Id);
+                }
+            }
+
             await _context.SaveChangesAsync();
 
             return Ok(new { 

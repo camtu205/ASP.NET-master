@@ -106,13 +106,22 @@ const Navbar = () => {
         </div>
 
         {/* Mobile Toggle */}
-        <div className="md:hidden flex items-center space-x-4">
+        <div className="md:hidden flex items-center space-x-2">
+          <Link to="/checkout-product" className="relative p-2 text-[#1e293b] group">
+            <ShoppingBag size={22} />
+            {cartCount > 0 && (
+              <span className="absolute top-0 right-0 bg-pink-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm">
+                {cartCount}
+              </span>
+            )}
+          </Link>
+          
           {!currentUser && (
-            <Link to="/login" className="text-[#1e293b]">
+            <Link to="/login" className="text-[#1e293b] p-2">
               <User size={22} />
             </Link>
           )}
-          <button onClick={() => setIsOpen(!isOpen)} className="text-[#1e293b]">
+          <button onClick={() => setIsOpen(!isOpen)} className="text-[#1e293b] p-2">
             {isOpen ? <X size={28} /> : <Menu size={28} />}
           </button>
         </div>
