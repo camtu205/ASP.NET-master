@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import api from '../services/api';
+import { getNotifications, markAllNotificationsRead } from '../services/api';
 
 const Notifications = () => {
     const [notifications, setNotifications] = useState([]);
@@ -11,10 +11,10 @@ const Notifications = () => {
 
     const fetchNotifications = async () => {
         try {
-            const data = await api.get('/Notifications');
+            const data = await getNotifications();
             setNotifications(data);
             // Mark all as read
-            await api.post('/Notifications/read-all');
+            await markAllNotificationsRead();
         } catch (err) {
             console.error("Lỗi lấy thông báo:", err);
         } finally {

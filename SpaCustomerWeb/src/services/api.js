@@ -72,3 +72,16 @@ export const updateCustomer = (id, data) => apiFetch(`/Customers/${id}`, {
   method: 'PUT',
   body: JSON.stringify(data),
 });
+
+export const getNotifications = () => apiFetch('/Notifications');
+export const markAllNotificationsRead = () => apiFetch('/Notifications/read-all', {
+  method: 'POST',
+});
+
+const api = {
+  getNotifications,
+  markAllNotificationsRead,
+  // add others if needed
+};
+
+export default api;
