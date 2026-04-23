@@ -169,6 +169,14 @@ using (var scope = app.Services.CreateScope())
         trySql("ALTER TABLE \"Appointments\" ADD COLUMN IF NOT EXISTS \"IsPrepaid\" BOOLEAN DEFAULT FALSE;");
         trySql("ALTER TABLE \"Appointments\" ADD COLUMN IF NOT EXISTS \"PrepaidAmount\" DECIMAL DEFAULT 0;");
         trySql("ALTER TABLE \"Reviews\" ADD COLUMN IF NOT EXISTS \"AppointmentId\" INTEGER;");
+        trySql(@"CREATE TABLE IF NOT EXISTS ""Notifications"" (
+            ""Id"" SERIAL PRIMARY KEY,
+            ""Title"" VARCHAR(200) NOT NULL,
+            ""Message"" TEXT NOT NULL,
+            ""CreatedDate"" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            ""IsRead"" BOOLEAN DEFAULT FALSE,
+            ""UserId"" INTEGER NOT NULL
+        );");
 
 
 

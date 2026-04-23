@@ -22,26 +22,33 @@ namespace NguyenThiCamTu_2123110472.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Notification>>> GetMyNotifications()
         {
-            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value;
-            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
-            
-            var userId = int.Parse(userIdStr);
-            var role = User.FindFirst(ClaimTypes.Role)?.Value;
-
-            // Admin sees all system notifications (where UserId is 1 or targeted to Admin)
-            if (role == "Admin")
+            try
             {
+                var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value;
+                if (string.IsNullOrEmpty(userIdStr)) return Unauthorized("User ID claim not found.");
+                
+                var userId = int.Parse(userIdStr);
+                var role = User.FindFirst(ClaimTypes.Role)?.Value;
+
+                // Admin sees all system notifications (where UserId is 1 or targeted to Admin)
+                if (role == "Admin")
+                {
+                    return await _context.Notifications
+                        .OrderByDescending(n => n.CreatedDate)
+                        .Take(50)
+                        .ToListAsync();
+                }
+
                 return await _context.Notifications
+                    .Where(n => n.UserId == userId)
                     .OrderByDescending(n => n.CreatedDate)
                     .Take(50)
                     .ToListAsync();
             }
-
-            return await _context.Notifications
-                .Where(n => n.UserId == userId)
-                .OrderByDescending(n => n.CreatedDate)
-                .Take(50)
-                .ToListAsync();
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Lỗi hệ thống khi lấy thông báo: {ex.Message}. Inner: {ex.InnerException?.Message}");
+            }
         }
 
         [HttpPost("{id}/read")]
