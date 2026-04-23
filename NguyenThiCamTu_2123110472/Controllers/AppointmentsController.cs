@@ -248,7 +248,6 @@ namespace NguyenThiCamTu_2123110472.Controllers
             }
 
             decimal finalTotal = totalBeforeDiscount - prepaidDiscount;
-            appointment.TotalAmount = finalTotal;
             appointment.TotalPrice = finalTotal;
             appointment.PrepaidAmount = request.IsPrepaid ? finalTotal : 0;
 

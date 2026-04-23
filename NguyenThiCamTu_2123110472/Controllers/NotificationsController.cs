@@ -22,7 +22,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Notification>>> GetMyNotifications()
         {
-            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value || User.FindFirst("UserId")?.Value;
+            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value;
             if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
             
             var userId = int.Parse(userIdStr);
@@ -58,7 +58,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
         [HttpPost("read-all")]
         public async Task<IActionResult> MarkAllAsRead()
         {
-            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value || User.FindFirst("UserId")?.Value;
+            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value;
             if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
             
             var userId = int.Parse(userIdStr);
