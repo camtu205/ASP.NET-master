@@ -675,7 +675,7 @@ const renderers = {
                         <h3>Biểu đồ doanh thu (7 ngày qua)</h3>
                         <span class="badge badge-active" style="background:#f0fdf4; color:#166534">Đỉnh điểm: ${peakDay}</span>
                     </div>
-                    <canvas id="revenueChart" height="250"></canvas>
+                    <canvas id="revenueChart" height="200"></canvas>
                 </div>
 
                 <div class="chart-card">
