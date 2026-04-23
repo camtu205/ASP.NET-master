@@ -168,11 +168,20 @@ function handleLogout() {
 // --- UI Utils ---
 function showToast(message, type = 'success') {
     const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.className = `toast ${type}`;
-    toast.style.background = type === 'success' ? '#10B981' : '#EF4444';
-    toast.classList.remove('hidden');
-    setTimeout(() => toast.classList.add('hidden'), 3000);
+    const toastMsg = document.getElementById('toast-message');
+    const toastIcon = document.getElementById('toast-icon');
+    
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        info: 'fa-info-circle'
+    };
+
+    toastMsg.textContent = message;
+    toastIcon.className = `fas ${icons[type] || icons.info}`;
+    toast.className = `toast ${type} show`;
+    
+    setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
 function switchAuthTab(tab) {
@@ -809,6 +818,31 @@ const renderers = {
             <table><thead><tr><th>Tên giường</th><th>Phòng</th><th>Loại phòng</th><th>Trạng thái</th>${isAdmin ? '<th style="text-align:right">Thao tác</th>' : ''}</tr></thead>
             <tbody>${data.map(i => `<tr><td><strong>${i.bedName}</strong></td><td>${i.room?.roomName || 'N/A'}</td><td>${i.room?.roomType?.name || 'N/A'}</td><td><span class="badge badge-${i.status.toLowerCase()}">${i.status}</span></td>
             ${isAdmin ? `<td style="text-align:right"><button class="btn-edit" onclick="openEditModal('bed', ${i.id})">Sửa</button> <button class="btn-danger" onclick="deleteItem('/Beds', ${i.id}, '${i.bedName}')">Xóa</button></td>` : ''}</tr>`).join('')}</tbody></table>`;
+    },
+
+    notifications: async () => {
+        const list = await apiCall('/Notifications');
+        document.getElementById('section-container').innerHTML = `
+            <div class="table-controls">
+                <h3>Trung tâm thông báo</h3>
+                <button class="btn-edit" style="width:auto" onclick="markAllNotificationsRead()">Đánh dấu tất cả đã đọc</button>
+            </div>
+            <div class="notification-list" style="display:flex; flex-direction:column; gap:15px; margin-top:20px">
+                ${list.length === 0 ? '<p style="text-align:center; color:var(--text-gray); padding:40px">Không có thông báo nào.</p>' : list.map(n => `
+                    <div class="card glass" style="opacity: ${n.isRead ? '0.6' : '1'}; border-left: 4px solid ${n.isRead ? '#ddd' : 'var(--primary)'}">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+                            <strong style="color:var(--primary)">${n.title}</strong>
+                            <small style="color:var(--text-gray)">${new Date(n.createdDate).toLocaleString()}</small>
+                        </div>
+                        <p style="font-size:0.95rem">${n.message}</p>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        // Mark all as read when entering this section
+        if (list.some(n => !n.isRead)) {
+            await markAllNotificationsRead(false);
+        }
     }
 };
 
@@ -1080,5 +1114,39 @@ document.getElementById('tab-register')?.addEventListener('click', () => switchA
 document.getElementById('logout-btn')?.addEventListener('click', handleLogout);
 document.getElementById('close-modal')?.addEventListener('click', () => document.getElementById('edit-modal').classList.add('hidden'));
 
+// --- Notifications Logic ---
+async function pollNotifications() {
+    if (!state.token) return;
+    try {
+        const list = await apiCall('/Notifications');
+        const unreadCount = list.filter(n => !n.isRead).length;
+        const badge = document.getElementById('notif-badge');
+        if (unreadCount > 0) {
+            badge.textContent = unreadCount;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+    } catch (e) {}
+}
+
+window.markAllNotificationsRead = async (refresh = true) => {
+    try {
+        await apiCall('/Notifications/read-all', 'POST');
+        await pollNotifications();
+        if (refresh && state.activeSection === 'notifications') renderers.notifications();
+    } catch (e) {}
+};
+
+document.getElementById('btn-notifications')?.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    state.activeSection = 'notifications';
+    document.getElementById('section-title').textContent = 'Thông báo';
+    renderers.notifications();
+});
+
+setInterval(pollNotifications, 30000); // Poll every 30s
+
 document.title = "Ctus Spa - Quản trị";
 initApp();
+pollNotifications();

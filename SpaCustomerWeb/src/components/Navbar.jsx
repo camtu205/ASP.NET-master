@@ -40,6 +40,7 @@ const Navbar = () => {
     { name: 'Services', path: '/services' },
     { name: 'Products', path: '/products' },
     { name: 'History', path: '/history' },
+    { name: 'Notifications', path: '/notifications' },
     { name: 'Profile', path: '/profile' },
   ];
 
@@ -64,6 +65,10 @@ const Navbar = () => {
               </Link>
             ))}
           </div>
+          <Link to="/notifications" className="relative p-2 text-[#1e293b] hover:text-[#d4af37] transition-colors">
+            <Calendar size={22} className="hidden" /> {/* Placeholder to keep spacing if needed */}
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg>
+          </Link>
           <Link to="/booking" className="btn-primary">
             <Calendar size={18} />
             <span>Book Now</span>

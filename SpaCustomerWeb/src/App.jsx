@@ -11,6 +11,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import PaymentStatus from './pages/PaymentStatus';
 
+import Notifications from './pages/Notifications';
+
 function App() {
   return (
     <Router>
@@ -23,6 +25,7 @@ function App() {
             <Route path="/products" element={<Products />} />
             <Route path="/booking" element={<Booking />} />
             <Route path="/history" element={<BookingHistory />} />
+            <Route path="/notifications" element={<Notifications />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />

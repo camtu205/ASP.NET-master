@@ -38,6 +38,14 @@ namespace NguyenThiCamTu_2123110472.Controllers
         {
             _context.Promotions.Add(promotion);
             await _context.SaveChangesAsync();
+
+            // Notify all customers
+            var customerUsers = await _context.Users.Where(u => u.Role == "Customer").ToListAsync();
+            foreach (var user in customerUsers)
+            {
+                await AppDbContext.CreateNotification(_context, "Khuyến mãi mới!", $"Vừa có chương trình khuyến mãi: {promotion.Name} (-{promotion.DiscountPercent}%). Hãy đặt lịch ngay!", user.Id);
+            }
+
             return CreatedAtAction("GetPromotion", new { id = promotion.Id }, promotion);
         }
 

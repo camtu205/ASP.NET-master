@@ -248,6 +248,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
             }
 
             decimal finalTotal = totalBeforeDiscount - prepaidDiscount;
+            appointment.TotalAmount = finalTotal;
             appointment.TotalPrice = finalTotal;
             appointment.PrepaidAmount = request.IsPrepaid ? finalTotal : 0;
 
@@ -282,27 +283,20 @@ namespace NguyenThiCamTu_2123110472.Controllers
                     Amount = finalTotal,
                     PaymentDate = DateTime.Now,
                     PaymentMethod = "VNPAY",
-                    Status = "Pending" // Change to Pending as we need real payment
+                    Status = "Pending" 
                 });
 
-                // Generate VNPay URL
                 var ipAddr = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "127.0.0.1";
                 paymentUrl = _vnpayService.CreatePaymentUrl(order.Id, finalTotal, ipAddr, $"Thanh toan lich hen #{appointment.Id}");
             }
  
-            // Tự động tạo thông báo
+            // Notify Admin
             var customer = await _context.Customers.FindAsync(request.CustomerId);
-            _context.Notifications.Add(new Notification
-            {
-                Title = request.IsPrepaid ? "Yêu cầu thanh toán trước" : "Lịch hẹn mới",
-                Message = $"{(request.IsPrepaid ? "[CHỜ THANH TOÁN] " : "")}Lịch hẹn: {customer?.FullName} vào {request.AppointmentDate:dd/MM/yyyy HH:mm}.",
-                CreatedDate = DateTime.UtcNow,
-                UserId = 1 
-            });
- 
+            await AppDbContext.CreateNotification(_context, request.IsPrepaid ? "Yêu cầu thanh toán trước" : "Lịch hẹn mới", 
+                $"{(request.IsPrepaid ? "[CHỜ THANH TOÁN] " : "")}Lịch hẹn: {customer?.FullName} vào {request.AppointmentDate:dd/MM/yyyy HH:mm}.");
+
             await _context.SaveChangesAsync();
 
-            // Return anonymous object to include paymentUrl
             return Ok(new { 
                 appointment, 
                 paymentUrl,
@@ -420,17 +414,22 @@ namespace NguyenThiCamTu_2123110472.Controllers
             appointment.BedId = request.BedId;
             appointment.Status = "Assigned";
             
-            _context.Entry(appointment).State = EntityState.Modified;
-
-            _context.Notifications.Add(new Notification
-            {
-                Title = "Lịch hẹn được phân công",
-                Message = $"Lịch hẹn #{id} đã được phân công.",
-                CreatedDate = DateTime.UtcNow,
-                UserId = 1 
-            });
-
             await _context.SaveChangesAsync();
+
+            // Notify Admin
+            await AppDbContext.CreateNotification(_context, "Lịch hẹn được phân công", $"Lịch hẹn #{id} đã được phân công cho nhân viên {staff.FullName}.");
+
+            // Notify Customer
+            var customer = await _context.Customers.FindAsync(appointment.CustomerId);
+            if (customer != null && !string.IsNullOrEmpty(customer.Username))
+            {
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == customer.Username);
+                if (user != null)
+                {
+                    await AppDbContext.CreateNotification(_context, "Cập nhật lịch hẹn", $"Lịch hẹn của bạn vào {appointment.AppointmentDate:dd/MM/yyyy HH:mm} đã được gán nhân viên {staff.FullName}.", user.Id);
+                }
+            }
+
             return NoContent();
         }
 
@@ -445,19 +444,21 @@ namespace NguyenThiCamTu_2123110472.Controllers
             }
 
             appointment.Status = "Done";
-            _context.Entry(appointment).State = EntityState.Modified;
-
-            // Thông báo thay đổi trạng thái: Hoàn tất
-            _context.Notifications.Add(new Notification
-            {
-                Title = "Lịch hẹn hoàn tất",
-                Message = $"Lịch hẹn #{id} đã hoàn tất. Vui lòng tiến hành thanh toán.",
-                CreatedDate = DateTime.UtcNow,
-                IsRead = false,
-                UserId = 1
-            });
-
             await _context.SaveChangesAsync();
+
+            // Notify Admin
+            await AppDbContext.CreateNotification(_context, "Lịch hẹn hoàn tất", $"Lịch hẹn #{id} đã hoàn tất.");
+
+            // Notify Customer
+            var customer = await _context.Customers.FindAsync(appointment.CustomerId);
+            if (customer != null && !string.IsNullOrEmpty(customer.Username))
+            {
+                var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == customer.Username);
+                if (user != null)
+                {
+                    await AppDbContext.CreateNotification(_context, "Hoàn tất dịch vụ", $"Dịch vụ của bạn đã hoàn tất. Cảm ơn bạn!", user.Id);
+                }
+            }
 
             return NoContent();
         }

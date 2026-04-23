@@ -255,8 +255,9 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 UserId = 1
             });
 
-            await _context.SaveChangesAsync();
-
+            // Notify Admin
+            var customer = await _context.Customers.FindAsync(customerId);
+            await AppDbContext.CreateNotification(_context, "Đơn hàng mới", $"Khách hàng {customer?.FullName} đã thanh toán đơn #{order.Id}: {total:N0}đ.");
             return Ok(new { order, paymentUrl });
         }
         [HttpDelete("{id}")]
