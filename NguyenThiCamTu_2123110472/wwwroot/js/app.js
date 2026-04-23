@@ -895,7 +895,7 @@ const renderers = {
             </div>
             <div class="notification-list" style="display:flex; flex-direction:column; gap:15px; margin-top:20px">
                 ${list.length === 0 ? '<p style="text-align:center; color:var(--text-gray); padding:40px">Không có thông báo nào.</p>' : list.map(n => `
-                    <div class="card glass" onclick="viewNotificationDetail('${n.targetType}', ${n.targetId}, ${n.id})" 
+                    <div class="card glass" onclick="viewNotificationDetail('${n.targetType}', '${n.targetId}', ${n.id})" 
                          style="opacity: ${n.isRead ? '0.6' : '1'}; border-left: 4px solid ${n.isRead ? '#ddd' : 'var(--primary)'}; cursor:pointer; transition: transform 0.2s"
                          onmouseover="this.style.transform='translateX(5px)'" onmouseout="this.style.transform='translateX(0)'">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
@@ -903,7 +903,7 @@ const renderers = {
                             <small style="color:var(--text-gray)">${new Date(n.createdDate).toLocaleString()}</small>
                         </div>
                         <p style="font-size:0.95rem">${n.message}</p>
-                        ${n.targetType ? `<div style="margin-top:10px; font-size:11px; color:var(--primary); font-weight:bold"><i class="fas fa-external-link-alt"></i> Xem chi tiết ${n.targetType === 'Appointment' ? 'Lịch hẹn' : 'Đơn hàng'}</div>` : ''}
+                        ${n.targetType && n.targetType !== 'null' ? `<div style="margin-top:10px; font-size:11px; color:var(--primary); font-weight:bold"><i class="fas fa-external-link-alt"></i> Xem chi tiết ${n.targetType === 'Appointment' ? 'Lịch hẹn' : 'Đơn hàng'}</div>` : ''}
                     </div>
                 `).join('')}
             </div>
