@@ -43,7 +43,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
             var customerUsers = await _context.Users.Where(u => u.Role == "Customer").ToListAsync();
             foreach (var user in customerUsers)
             {
-                await AppDbContext.CreateNotification(_context, "Khuyến mãi mới!", $"Vừa có chương trình khuyến mãi: {promotion.Name} (-{promotion.DiscountPercent}%). Hãy đặt lịch ngay!", user.Id);
+                await AppDbContext.CreateNotification(_context, "Khuyến mãi mới!", $"Vừa có chương trình khuyến mãi: {promotion.Name} (-{promotion.DiscountPercent}%). Hãy đặt lịch ngay!", user.Id, "Promotion", promotion.Id);
             }
 
             return CreatedAtAction("GetPromotion", new { id = promotion.Id }, promotion);

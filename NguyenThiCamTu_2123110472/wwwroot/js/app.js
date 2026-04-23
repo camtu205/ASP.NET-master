@@ -829,12 +829,15 @@ const renderers = {
             </div>
             <div class="notification-list" style="display:flex; flex-direction:column; gap:15px; margin-top:20px">
                 ${list.length === 0 ? '<p style="text-align:center; color:var(--text-gray); padding:40px">Không có thông báo nào.</p>' : list.map(n => `
-                    <div class="card glass" style="opacity: ${n.isRead ? '0.6' : '1'}; border-left: 4px solid ${n.isRead ? '#ddd' : 'var(--primary)'}">
+                    <div class="card glass" onclick="viewNotificationDetail('${n.targetType}', ${n.targetId}, ${n.id})" 
+                         style="opacity: ${n.isRead ? '0.6' : '1'}; border-left: 4px solid ${n.isRead ? '#ddd' : 'var(--primary)'}; cursor:pointer; transition: transform 0.2s"
+                         onmouseover="this.style.transform='translateX(5px)'" onmouseout="this.style.transform='translateX(0)'">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
                             <strong style="color:var(--primary)">${n.title}</strong>
                             <small style="color:var(--text-gray)">${new Date(n.createdDate).toLocaleString()}</small>
                         </div>
                         <p style="font-size:0.95rem">${n.message}</p>
+                        ${n.targetType ? `<div style="margin-top:10px; font-size:11px; color:var(--primary); font-weight:bold"><i class="fas fa-external-link-alt"></i> Xem chi tiết ${n.targetType === 'Appointment' ? 'Lịch hẹn' : 'Đơn hàng'}</div>` : ''}
                     </div>
                 `).join('')}
             </div>
@@ -1144,6 +1147,36 @@ document.getElementById('btn-notifications')?.addEventListener('click', () => {
     document.getElementById('section-title').textContent = 'Thông báo';
     renderers.notifications();
 });
+
+window.viewNotificationDetail = async (type, id, notifId) => {
+    if (!type || !id) return;
+    
+    // Mark this specific one as read
+    try { await apiCall(`/Notifications/${notifId}/read`, 'POST'); } catch(e) {}
+    await pollNotifications();
+
+    if (type === 'Appointment') {
+        state.activeSection = 'appointments';
+        document.getElementById('section-title').textContent = 'Lịch hẹn';
+        // Highlight in sidebar
+        document.querySelectorAll('.nav-item').forEach(i => {
+            if(i.getAttribute('data-section') === 'appointments') i.classList.add('active');
+            else i.classList.remove('active');
+        });
+        await renderers.appointments();
+        // Open details for this appointment
+        // We can reuse openEditModal or create a specific viewer
+        openEditModal('appointment', id);
+    } else if (type === 'Order') {
+        state.activeSection = 'orders';
+        document.getElementById('section-title').textContent = 'Đơn hàng';
+        document.querySelectorAll('.nav-item').forEach(i => {
+            if(i.getAttribute('data-section') === 'orders') i.classList.add('active');
+            else i.classList.remove('active');
+        });
+        await renderers.orders();
+    }
+};
 
 setInterval(pollNotifications, 30000); // Poll every 30s
 

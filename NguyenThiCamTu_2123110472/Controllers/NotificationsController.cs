@@ -71,11 +71,19 @@ namespace NguyenThiCamTu_2123110472.Controllers
         [HttpPost("read-all")]
         public async Task<IActionResult> MarkAllAsRead()
         {
-            var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value;
-            if (string.IsNullOrEmpty(userIdStr)) return Unauthorized();
-            
-            var userId = int.Parse(userIdStr);
-            var role = User.FindFirst(ClaimTypes.Role)?.Value;
+            try
+            {
+                var userIdStr = User.FindFirst("UserId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userIdStr)) return Unauthorized("User ID claim not found.");
+                
+                int userId = 0;
+                if (!int.TryParse(userIdStr, out userId))
+                {
+                    var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == userIdStr);
+                    if (user != null) userId = user.Id;
+                }
+
+                var role = User.FindFirst(ClaimTypes.Role)?.Value;
 
             var query = _context.Notifications.Where(n => !n.IsRead);
             if (role != "Admin")
@@ -87,6 +95,11 @@ namespace NguyenThiCamTu_2123110472.Controllers
             unread.ForEach(n => n.IsRead = true);
             await _context.SaveChangesAsync();
             return NoContent();
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Lỗi hệ thống khi đánh dấu đã đọc: {ex.Message}");
+            }
         }
     }
 }

@@ -175,8 +175,13 @@ using (var scope = app.Services.CreateScope())
             ""Message"" TEXT NOT NULL,
             ""CreatedDate"" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
             ""IsRead"" BOOLEAN DEFAULT FALSE,
-            ""UserId"" INTEGER NOT NULL
+            ""UserId"" INTEGER NOT NULL,
+            ""TargetType"" VARCHAR(50),
+            ""TargetId"" INTEGER
         );");
+        // Also try to add columns if table exists but without them
+        trySql("ALTER TABLE \"Notifications\" ADD COLUMN IF NOT EXISTS \"TargetType\" VARCHAR(50);");
+        trySql("ALTER TABLE \"Notifications\" ADD COLUMN IF NOT EXISTS \"TargetId\" INTEGER;");
 
 
 

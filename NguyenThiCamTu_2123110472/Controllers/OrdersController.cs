@@ -252,12 +252,14 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 Title = "Thanh toán thành công",
                 Message = $"Hóa đơn #{order.Id} trị giá {total:N0}đ đã được thanh toán. Khách hàng nhận được {earnedPoints} điểm thưởng.",
                 CreatedDate = DateTime.UtcNow,
-                UserId = 1
+                UserId = 1,
+                TargetType = "Order",
+                TargetId = order.Id
             });
 
             // Notify Admin
             var customer = await _context.Customers.FindAsync(customerId);
-            await AppDbContext.CreateNotification(_context, "Đơn hàng mới", $"Khách hàng {customer?.FullName} đã thanh toán đơn #{order.Id}: {total:N0}đ.");
+            await AppDbContext.CreateNotification(_context, "Đơn hàng mới", $"Khách hàng {customer?.FullName} đã thanh toán đơn #{order.Id}: {total:N0}đ.", 1, "Order", order.Id);
             return Ok(new { order, paymentUrl });
         }
         [HttpDelete("{id}")]

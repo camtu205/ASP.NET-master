@@ -14,13 +14,15 @@ namespace NguyenThiCamTu_2123110472.Data
             _currentUserService = currentUserService;
         }
 
-        public static async Task CreateNotification(AppDbContext context, string title, string message, int? userId = null)
+        public static async Task CreateNotification(AppDbContext context, string title, string message, int? userId = null, string? targetType = null, int? targetId = null)
         {
             var notification = new Notification
             {
                 Title = title,
                 Message = message,
                 UserId = userId ?? 1, // Default to admin
+                TargetType = targetType,
+                TargetId = targetId,
                 CreatedDate = DateTime.UtcNow,
                 IsRead = false
             };

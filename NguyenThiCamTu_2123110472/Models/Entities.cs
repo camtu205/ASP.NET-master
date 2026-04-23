@@ -392,6 +392,9 @@ namespace NguyenThiCamTu_2123110472.Models
 
         public bool IsRead { get; set; } = false;
 
+        public string? TargetType { get; set; } // Appointment, Order
+        public int? TargetId { get; set; }
+
         public int UserId { get; set; }
         [ForeignKey("UserId")]
         [JsonIgnore]

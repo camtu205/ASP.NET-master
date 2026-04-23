@@ -292,7 +292,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
             // Notify Admin
             var customer = await _context.Customers.FindAsync(request.CustomerId);
             await AppDbContext.CreateNotification(_context, request.IsPrepaid ? "Yêu cầu thanh toán trước" : "Lịch hẹn mới", 
-                $"{(request.IsPrepaid ? "[CHỜ THANH TOÁN] " : "")}Lịch hẹn: {customer?.FullName} vào {request.AppointmentDate:dd/MM/yyyy HH:mm}.");
+                $"{(request.IsPrepaid ? "[CHỜ THANH TOÁN] " : "")}Lịch hẹn: {customer?.FullName} vào {request.AppointmentDate:dd/MM/yyyy HH:mm}.", 1, "Appointment", appointment.Id);
 
             await _context.SaveChangesAsync();
 
@@ -416,7 +416,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
             await _context.SaveChangesAsync();
 
             // Notify Admin
-            await AppDbContext.CreateNotification(_context, "Lịch hẹn được phân công", $"Lịch hẹn #{id} đã được phân công cho nhân viên {staff.FullName}.");
+            await AppDbContext.CreateNotification(_context, "Lịch hẹn được phân công", $"Lịch hẹn #{id} đã được phân công cho nhân viên {staff.FullName}.", 1, "Appointment", id);
 
             // Notify Customer
             var customer = await _context.Customers.FindAsync(appointment.CustomerId);
@@ -425,7 +425,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == customer.Username);
                 if (user != null)
                 {
-                    await AppDbContext.CreateNotification(_context, "Cập nhật lịch hẹn", $"Lịch hẹn của bạn vào {appointment.AppointmentDate:dd/MM/yyyy HH:mm} đã được gán nhân viên {staff.FullName}.", user.Id);
+                    await AppDbContext.CreateNotification(_context, "Cập nhật lịch hẹn", $"Lịch hẹn của bạn vào {appointment.AppointmentDate:dd/MM/yyyy HH:mm} đã được gán nhân viên {staff.FullName}.", user.Id, "Appointment", id);
                 }
             }
 
@@ -446,7 +446,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
             await _context.SaveChangesAsync();
 
             // Notify Admin
-            await AppDbContext.CreateNotification(_context, "Lịch hẹn hoàn tất", $"Lịch hẹn #{id} đã hoàn tất.");
+            await AppDbContext.CreateNotification(_context, "Lịch hẹn hoàn tất", $"Lịch hẹn #{id} đã hoàn tất.", 1, "Appointment", id);
 
             // Notify Customer
             var customer = await _context.Customers.FindAsync(appointment.CustomerId);
@@ -455,7 +455,7 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == customer.Username);
                 if (user != null)
                 {
-                    await AppDbContext.CreateNotification(_context, "Hoàn tất dịch vụ", $"Dịch vụ của bạn đã hoàn tất. Cảm ơn bạn!", user.Id);
+                    await AppDbContext.CreateNotification(_context, "Hoàn tất dịch vụ", $"Dịch vụ của bạn đã hoàn tất. Cảm ơn bạn!", user.Id, "Appointment", id);
                 }
             }
 
