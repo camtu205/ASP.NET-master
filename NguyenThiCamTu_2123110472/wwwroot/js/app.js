@@ -396,6 +396,63 @@ async function openCRUDModal(type, id = null) {
             <div class="input-group"><label>Loại phòng</label><select name="roomTypeId">${types.map(t => `<option value="${t.id}" ${t.id === data.roomTypeId ? 'selected' : ''}>${t.name}</option>`).join('')}</select></div>
             <div class="input-group"><label>Trạng thái</label><select name="status"><option value="Available" ${data.status==='Available'?'selected':''}>Sẵn sàng</option><option value="Occupied" ${data.status==='Occupied'?'selected':''}>Đang sử dụng</option><option value="Maintenance" ${data.status==='Maintenance'?'selected':''}>Bảo trì</option></select></div>
         `;
+    } else if (type === 'appointment') {
+        const [staffs, beds] = await Promise.all([apiCall('/Staffs'), apiCall('/Beds')]);
+        html += `
+            <div style="padding:10px; background:var(--bg-light); border-radius:12px; margin-bottom:20px; border:1px solid #eee">
+                <div style="display:grid; grid-template-cols: 1fr 1fr; gap:10px; font-size:0.9rem">
+                    <div><strong>Khách hàng:</strong> ${data.customer?.fullName || 'N/A'}</div>
+                    <div><strong>Ngày hẹn:</strong> ${new Date(data.appointmentDate).toLocaleString()}</div>
+                    <div><strong>Tổng tiền:</strong> ${data.totalPrice?.toLocaleString() || 0}đ</div>
+                    <div><strong>Trạng thái:</strong> <span class="badge badge-${data.status.toLowerCase()}">${data.status}</span></div>
+                </div>
+                <div style="margin-top:10px"><strong>Dịch vụ:</strong> ${data.appointmentDetails?.map(d => d.service?.name).join(', ') || 'N/A'}</div>
+            </div>
+            <div class="input-group">
+                <label>Thay đổi trạng thái</label>
+                <select name="status">
+                    <option value="Pending" ${data.status === 'Pending' ? 'selected' : ''}>Chờ xác nhận</option>
+                    <option value="Assigned" ${data.status === 'Assigned' ? 'selected' : ''}>Đã phân công</option>
+                    <option value="Done" ${data.status === 'Done' ? 'selected' : ''}>Đã hoàn tất</option>
+                    <option value="Cancelled" ${data.status === 'Cancelled' ? 'selected' : ''}>Đã hủy</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Gán nhân viên</label>
+                <select name="staffId">
+                    <option value="">-- Chọn nhân viên --</option>
+                    ${staffs.map(s => `<option value="${s.id}" ${data.staffId === s.id ? 'selected' : ''}>${s.fullName}</option>`).join('')}
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Gán giường</label>
+                <select name="bedId">
+                    <option value="">-- Chọn giường --</option>
+                    ${beds.map(b => `<option value="${b.id}" ${data.bedId === b.id ? 'selected' : ''}>${b.bedName} (${b.room?.roomName})</option>`).join('')}
+                </select>
+            </div>
+            <p style="font-size:11px; color:var(--text-gray); font-style:italic">* Lưu ý: Bạn có thể nhấn Sửa để cập nhật các thông tin này.</p>
+        `;
+    } else if (type === 'order') {
+        html += `
+            <div style="padding:20px; background:white; border-radius:15px; border:1px solid #eee">
+                <h4 style="margin-bottom:15px; color:var(--primary)">Hóa đơn #${data.id}</h4>
+                <div style="margin-bottom:10px"><strong>Khách hàng:</strong> ${data.customer?.fullName || 'N/A'}</div>
+                <div style="margin-bottom:20px"><strong>Ngày thanh toán:</strong> ${new Date(data.orderDate).toLocaleString()}</div>
+                <table style="width:100%; border-collapse:collapse">
+                    <thead><tr style="border-bottom:2px solid #eee; text-align:left"><th style="padding:10px 0">Nội dung</th><th>Giá</th></tr></thead>
+                    <tbody>
+                        ${data.orderDetails?.map(d => `<tr><td style="padding:10px 0">${d.service?.name || d.product?.name || 'Sản phẩm/Dịch vụ'}</td><td>${d.price.toLocaleString()}đ</td></tr>`).join('')}
+                    </tbody>
+                    <tfoot>
+                        <tr style="border-top:2px solid #eee; font-weight:bold"><td style="padding:15px 0">Tổng cộng</td><td style="font-size:1.2rem; color:var(--primary)">${data.totalAmount.toLocaleString()}đ</td></tr>
+                    </tfoot>
+                </table>
+            </div>
+            <div style="margin-top:20px; text-align:center">
+                <button type="button" class="btn-primary" onclick="window.print()">In hóa đơn</button>
+            </div>
+        `;
     } else if (type === 'bed') {
         const rooms = await apiCall('/Rooms');
         html += `
@@ -454,15 +511,24 @@ async function openCRUDModal(type, id = null) {
         if (type === 'roomType') body = {...body, name: fd.get('name'), description: fd.get('desc'), priceMultiplier: parseFloat(fd.get('multiplier'))};
         if (type === 'room') body = {...body, roomName: fd.get('roomName'), roomTypeId: parseInt(fd.get('roomTypeId')), status: fd.get('status')};
         if (type === 'bed') body = {...body, bedName: fd.get('bedName'), roomId: parseInt(fd.get('roomId')), status: fd.get('status')};
+        if (type === 'appointment') {
+            body = { ...body, status: fd.get('status'), staffId: fd.get('staffId') ? parseInt(fd.get('staffId')) : null, bedId: fd.get('bedId') ? parseInt(fd.get('bedId')) : null };
+        }
+        if (type === 'order') return modal.classList.add('hidden');
 
         if (!validateData(e.target, body)) return;
         
-        const ep = type === 'product' ? '/Product' : (['treatment', 'customerTreatment', 'roomType', 'room', 'bed'].includes(type) ? `/${type.charAt(0).toUpperCase() + type.slice(1) + 's'}` : `/${type.charAt(0).toUpperCase() + type.slice(1) + 's'}`);
+        let endpoint = `/${type.charAt(0).toUpperCase() + type.slice(1)}s`;
+        if (type === 'product') endpoint = '/Product';
+        if (type === 'appointment') endpoint = '/Appointments';
+        if (type === 'order') endpoint = '/Orders';
+
         try {
-            await apiCall(isEdit ? `${ep}/${id}` : ep, isEdit ? 'PUT' : 'POST', body);
+            await apiCall(isEdit ? `${endpoint}/${data.id}` : endpoint, isEdit ? 'PUT' : 'POST', body);
             modal.classList.add('hidden');
             showToast(isEdit ? 'Đã cập nhật!' : 'Đã thêm thành công!');
-            renderers[state.activeSection]();
+            if (renderers[state.activeSection]) renderers[state.activeSection]();
+            else if (type === 'appointment') renderers.appointments();
         } catch (err) {}
     };
 };
@@ -1158,14 +1224,11 @@ window.viewNotificationDetail = async (type, id, notifId) => {
     if (type === 'Appointment') {
         state.activeSection = 'appointments';
         document.getElementById('section-title').textContent = 'Lịch hẹn';
-        // Highlight in sidebar
         document.querySelectorAll('.nav-item').forEach(i => {
             if(i.getAttribute('data-section') === 'appointments') i.classList.add('active');
             else i.classList.remove('active');
         });
         await renderers.appointments();
-        // Open details for this appointment
-        // We can reuse openEditModal or create a specific viewer
         openEditModal('appointment', id);
     } else if (type === 'Order') {
         state.activeSection = 'orders';
@@ -1175,6 +1238,20 @@ window.viewNotificationDetail = async (type, id, notifId) => {
             else i.classList.remove('active');
         });
         await renderers.orders();
+        openEditModal('order', id);
+    } else if (type === 'Promotion') {
+        state.activeSection = 'promotions';
+        document.getElementById('section-title').textContent = 'Khuyến mãi';
+        document.querySelectorAll('.nav-item').forEach(i => {
+            if(i.getAttribute('data-section') === 'promotions') i.classList.add('active');
+            else i.classList.remove('active');
+        });
+        await renderers.promotions();
+        openEditModal('promotion', id);
+    } else {
+        // Just show notifications list
+        state.activeSection = 'notifications';
+        renderers.notifications();
     }
 };
 
