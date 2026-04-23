@@ -59,7 +59,7 @@ const Register = () => {
         </Link>
 
         <div className="text-center mb-12 mt-4">
-          <h1 className="text-5xl font-serif mb-4 text-[#1e293b]">Join Lumina</h1>
+          <h1 className="text-5xl font-serif mb-4 text-[#1e293b]">Join Ctus</h1>
           <p className="text-[#64748b] text-lg">Start your journey to absolute wellness today</p>
         </div>
 

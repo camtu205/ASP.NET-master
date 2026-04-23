@@ -67,7 +67,7 @@ const Home = () => {
       <section className="section-padding bg-white">
         <div className="container">
           <div className="text-center mb-20 fade-in">
-            <h2 className="text-4xl md:text-5xl font-serif mb-4">Why Choose Lumina</h2>
+            <h2 className="text-4xl md:text-5xl font-serif mb-4">Why Choose Ctus</h2>
             <p className="text-[#475569] max-w-2xl mx-auto">We combine ancient wisdom with modern techniques to provide an unparalleled wellness experience.</p>
           </div>
 

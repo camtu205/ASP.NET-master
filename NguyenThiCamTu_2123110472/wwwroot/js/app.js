@@ -78,6 +78,13 @@ async function apiCall(endpoint, method = 'GET', body = null, retries = 2) {
     }
 }
 
+function getFullUrl(url) {
+    if (!url) return 'https://placehold.co/100';
+    if (url.startsWith('http')) return url;
+    // Nếu là đường dẫn tương đối (bắt đầu bằng /), nối với base API URL (bỏ phần /api)
+    return API_BASE.replace('/api', '') + (url.startsWith('/') ? url : '/' + url);
+}
+
 async function uploadFile(file) {
     if (!file) return null;
     const fd = new FormData();
@@ -313,10 +320,10 @@ async function openCRUDModal(type, id = null) {
         html += `
             <div class="input-group"><label>Tên dịch vụ</label><input type="text" name="name" value="${data.name}" placeholder="Tên dịch vụ..."></div>
             <div class="input-group"><label>Giá (VNĐ)</label><input type="number" name="price" value="${data.price}"></div>
-            <div class="input-group"><label>Thời gian (phút)</label><input type="number" name="duration" value="${data.durationMinutes}"></div>
+            <div class="input-group"><label>Thời gian (phút)</label><input type="number" name="durationMinutes" value="${data.durationMinutes}"></div>
             <div class="input-group">
                 <label>Hình ảnh</label>
-                ${data.imageUrl ? `<img src="${data.imageUrl}" style="width:100px; height:100px; object-fit:cover; border-radius:8px; margin-bottom:10px; border:1px solid #ddd">` : ''}
+                ${data.imageUrl ? `<img src="${getFullUrl(data.imageUrl)}" style="width:100px; height:100px; object-fit:cover; border-radius:8px; margin-bottom:10px; border:1px solid #ddd">` : ''}
                 <input type="file" name="imageFile" accept="image/*">
             </div>
         `;
@@ -324,10 +331,10 @@ async function openCRUDModal(type, id = null) {
         html += `
             <div class="input-group"><label>Tên sản phẩm</label><input type="text" name="name" value="${data.name}"></div>
             <div class="input-group"><label>Giá (VNĐ)</label><input type="number" name="price" value="${data.price}"></div>
-            <div class="input-group"><label>Tồn kho</label><input type="number" name="stock" value="${data.stockQuantity}"></div>
+            <div class="input-group"><label>Tồn kho</label><input type="number" name="stockQuantity" value="${data.stockQuantity}"></div>
             <div class="input-group">
                 <label>Hình ảnh</label>
-                ${data.imageUrl ? `<img src="${data.imageUrl}" style="width:100px; height:100px; object-fit:cover; border-radius:8px; margin-bottom:10px; border:1px solid #ddd">` : ''}
+                ${data.imageUrl ? `<img src="${getFullUrl(data.imageUrl)}" style="width:100px; height:100px; object-fit:cover; border-radius:8px; margin-bottom:10px; border:1px solid #ddd">` : ''}
                 <input type="file" name="imageFile" accept="image/*">
             </div>
         `;
@@ -519,84 +526,226 @@ async function openCRUDModal(type, id = null) {
     form.onsubmit = async (e) => {
         e.preventDefault();
         const fd = new FormData(e.target);
-        let body = isEdit ? { id: data.id, imageUrl: data.imageUrl } : { imageUrl: null };
-        
-        // Handle File Upload
-        const file = fd.get('imageFile');
-        if (file && file.size > 0) {
-            try {
-                showToast('Đang tải ảnh lên...', 'info');
-                body.imageUrl = await uploadFile(file);
-            } catch (err) {
-                return showToast('Lỗi tải ảnh!', 'error');
-            }
-        }
-
-        if (type === 'customer') body = {...body, fullName: fd.get('fullName'), phoneNumber: fd.get('phoneNumber'), email: fd.get('email')};
-        if (type === 'staff') body = {...body, fullName: fd.get('fullName'), phoneNumber: fd.get('phoneNumber'), position: fd.get('position'), email: fd.get('email')};
-        if (type === 'service') body = {...body, name: fd.get('name'), price: parseFloat(fd.get('price')), durationMinutes: parseInt(fd.get('duration'))};
-        if (type === 'product') body = {...body, name: fd.get('name'), price: parseFloat(fd.get('price')), stockQuantity: parseInt(fd.get('stock'))};
-        if (type === 'promotion') {
-            const appServices = fd.getAll('applicableServices');
-            const appIds = appServices.includes('ALL') ? 'ALL' : (appServices.length > 0 ? (',' + appServices.join(',') + ',') : 'ALL');
-            body = {...body, 
-                name: fd.get('name'), 
-                discountPercent: parseFloat(fd.get('pct')), 
-                maxUsage: fd.get('maxUsage') ? parseInt(fd.get('maxUsage')) : null,
-                applicableServiceIds: appIds,
-                startDate: fd.get('startDate'), 
-                endDate: fd.get('endDate')
-            };
-        }
-        if (type === 'treatment') {
-            const selectedServices = fd.getAll('treatmentServices');
-            const serviceIds = selectedServices.length > 0 ? (',' + selectedServices.join(',') + ',') : null;
-            body = { 
-                ...body, 
-                name: fd.get('name'), 
-                totalSessions: parseInt(fd.get('totalSessions')), 
-                price: parseFloat(fd.get('price')), 
-                durationPerSession: parseInt(fd.get('duration')),
-                serviceIds: serviceIds
-            };
-        }
-        if (type === 'customerTreatment') body = {...body, customerId: parseInt(fd.get('customerId')), treatmentId: parseInt(fd.get('treatmentId')), status: fd.get('status')};
-        if (type === 'roomType') body = {...body, name: fd.get('name'), description: fd.get('desc'), priceMultiplier: parseFloat(fd.get('multiplier'))};
-        if (type === 'room') body = {...body, roomName: fd.get('roomName'), roomTypeId: parseInt(fd.get('roomTypeId')), status: fd.get('status')};
-        if (type === 'bed') body = {...body, bedName: fd.get('bedName'), roomId: parseInt(fd.get('roomId')), status: fd.get('status')};
-        if (type === 'appointment') {
-            body = { ...body, status: fd.get('status'), staffId: fd.get('staffId') ? parseInt(fd.get('staffId')) : null, bedId: fd.get('bedId') ? parseInt(fd.get('bedId')) : null };
-        }
-        if (type === 'order') return modal.classList.add('hidden');
-
-        if (!validateData(e.target, body)) return;
         
         let endpoint = `/${type.charAt(0).toUpperCase() + type.slice(1)}s`;
         if (type === 'product') endpoint = '/Product';
         if (type === 'appointment') endpoint = '/Appointments';
         if (type === 'order') endpoint = '/Orders';
 
+        const method = isEdit ? 'PUT' : 'POST';
+        const url = isEdit ? `${API_BASE}${endpoint}/${data.id}` : `${API_BASE}${endpoint}`;
+
         try {
-            await apiCall(isEdit ? `${endpoint}/${data.id}` : endpoint, isEdit ? 'PUT' : 'POST', body);
+            showToast('Đang xử lý...', 'info');
+
+            let response;
+            if (['service', 'product'].includes(type)) {
+                // Đối với Service và Product, gửi trực tiếp FormData để backend xử lý IFormFile [FromForm]
+                const headers = {};
+                if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
+                
+                response = await fetch(url, {
+                    method,
+                    headers,
+                    body: fd
+                });
+            } else {
+                // Các loại khác vẫn dùng JSON như cũ
+                let body = isEdit ? { id: data.id } : {};
+                
+                if (type === 'customer') body = {...body, fullName: fd.get('fullName'), phoneNumber: fd.get('phoneNumber'), email: fd.get('email')};
+                if (type === 'staff') body = {...body, fullName: fd.get('fullName'), phoneNumber: fd.get('phoneNumber'), position: fd.get('position'), email: fd.get('email')};
+                if (type === 'promotion') {
+                    const appServices = fd.getAll('applicableServices');
+                    const appIds = appServices.includes('ALL') ? 'ALL' : (appServices.length > 0 ? (',' + appServices.join(',') + ',') : 'ALL');
+                    body = {...body, name: fd.get('name'), discountPercent: parseFloat(fd.get('pct')), maxUsage: fd.get('maxUsage') ? parseInt(fd.get('maxUsage')) : null, applicableServiceIds: appIds, startDate: fd.get('startDate'), endDate: fd.get('endDate') };
+                }
+                if (type === 'treatment') {
+                    const selectedServices = fd.getAll('treatmentServices');
+                    body = { ...body, name: fd.get('name'), totalSessions: parseInt(fd.get('totalSessions')), price: parseFloat(fd.get('price')), durationPerSession: parseInt(fd.get('duration')), serviceIds: selectedServices.length > 0 ? (',' + selectedServices.join(',') + ',') : null };
+                }
+                if (type === 'customerTreatment') body = {...body, customerId: parseInt(fd.get('customerId')), treatmentId: parseInt(fd.get('treatmentId')), status: fd.get('status')};
+                if (type === 'roomType') body = {...body, name: fd.get('name'), description: fd.get('desc'), priceMultiplier: parseFloat(fd.get('multiplier'))};
+                if (type === 'room') body = {...body, roomName: fd.get('roomName'), roomTypeId: parseInt(fd.get('roomTypeId')), status: fd.get('status')};
+                if (type === 'bed') body = {...body, bedName: fd.get('bedName'), roomId: parseInt(fd.get('roomId')), status: fd.get('status')};
+                if (type === 'appointment') body = { ...body, status: fd.get('status'), staffId: fd.get('staffId') ? parseInt(fd.get('staffId')) : null, bedId: fd.get('bedId') ? parseInt(fd.get('bedId')) : null };
+
+                if (!validateData(e.target, body)) return;
+
+                const headers = { 'Content-Type': 'application/json' };
+                if (state.token) headers['Authorization'] = `Bearer ${state.token}`;
+                
+                response = await fetch(url, {
+                    method,
+                    headers,
+                    body: JSON.stringify(body)
+                });
+            }
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Lỗi hệ thống');
+            }
+
             modal.classList.add('hidden');
             showToast(isEdit ? 'Đã cập nhật!' : 'Đã thêm thành công!');
             if (renderers[state.activeSection]) renderers[state.activeSection]();
-            else if (type === 'appointment') renderers.appointments();
-        } catch (err) {}
+        } catch (err) {
+            console.error(err);
+            showToast(err.message, 'error');
+        }
     };
 };
 
 // --- Renderers ---
 const renderers = {
     dashboard: async () => {
-        const [c, a, o] = await Promise.all([apiCall('/Customers'), apiCall('/Appointments'), apiCall('/Orders')]);
+        const [customers, apps, orders, services] = await Promise.all([
+            apiCall('/Customers'), 
+            apiCall('/Appointments'), 
+            apiCall('/Orders'),
+            apiCall('/Services')
+        ]);
+
+        const totalRevenue = orders.reduce((s, x) => s + x.totalAmount, 0);
+        const pendingApps = apps.filter(x => x.status === 'Pending' || x.status === 'Assigned').length;
+        
+        // Calculate Revenue by Day (Last 7 Days)
+        const revenueByDay = {};
+        const labels = [];
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+            labels.push(dateStr);
+            revenueByDay[dateStr] = 0;
+        }
+
+        orders.forEach(o => {
+            const d = new Date(o.orderDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+            if (revenueByDay[d] !== undefined) {
+                revenueByDay[d] += o.totalAmount;
+            }
+        });
+
+        const revenueData = Object.values(revenueByDay);
+        const maxRevenue = Math.max(...revenueData);
+        const peakDay = labels[revenueData.indexOf(maxRevenue)];
+
+        // Popular Services
+        const serviceCounts = {};
+        orders.forEach(o => {
+            o.orderDetails?.forEach(d => {
+                if (d.serviceId) {
+                    serviceCounts[d.serviceId] = (serviceCounts[d.serviceId] || 0) + 1;
+                }
+            });
+        });
+
+        const popularServices = Object.entries(serviceCounts)
+            .map(([id, count]) => ({
+                name: services.find(s => s.id == id)?.name || 'Dịch vụ ẩn',
+                count
+            }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
+
         document.getElementById('section-container').innerHTML = `
             <div class="card-grid">
-                <div class="card glass"><h3><i class="fas fa-users"></i> Khách hàng</h3><div class="stat-value">${c.length}</div></div>
-                <div class="card glass"><h3><i class="fas fa-calendar-alt"></i> Lịch hẹn</h3><div class="stat-value">${a.filter(x => x.status !== 'Done').length}</div></div>
-                <div class="card glass"><h3><i class="fas fa-wallet"></i> Doanh thu</h3><div class="stat-value">${o.reduce((s, x) => s + x.totalAmount, 0).toLocaleString()}đ</div></div>
+                <div class="stat-card revenue">
+                    <span class="label">Tổng doanh thu</span>
+                    <span class="value">${totalRevenue.toLocaleString()}đ</span>
+                    <div class="trend up"><i class="fas fa-arrow-up"></i> 12% so với tháng trước</div>
+                </div>
+                <div class="stat-card appointments">
+                    <span class="label">Lịch hẹn mới</span>
+                    <span class="value">${pendingApps}</span>
+                    <div class="trend ${pendingApps > 5 ? 'up' : 'down'}"><i class="fas fa-calendar"></i> Cần xử lý</div>
+                </div>
+                <div class="stat-card customers">
+                    <span class="label">Khách hàng</span>
+                    <span class="value">${customers.length}</span>
+                    <div class="trend up"><i class="fas fa-user-plus"></i> +${customers.filter(c => new Date(c.createdAt || Date.now()) > new Date(Date.now() - 7*24*3600*1000)).length} tuần này</div>
+                </div>
+            </div>
+
+            <div class="dashboard-grid">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>Biểu đồ doanh thu (7 ngày qua)</h3>
+                        <span class="badge badge-active" style="background:#f0fdf4; color:#166534">Đỉnh điểm: ${peakDay}</span>
+                    </div>
+                    <canvas id="revenueChart" height="300"></canvas>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>Dịch vụ yêu thích</h3>
+                    </div>
+                    <div class="popular-list">
+                        ${popularServices.length > 0 ? popularServices.map((s, i) => `
+                            <div class="popular-item">
+                                <div class="popular-info">
+                                    <span class="popular-name">${s.name}</span>
+                                    <span class="popular-count">${s.count} lượt sử dụng</span>
+                                </div>
+                                <div class="popular-rank">${i + 1}</div>
+                            </div>
+                        `).join('') : '<p class="text-gray" style="text-align:center; padding:20px">Chưa có dữ liệu dịch vụ</p>'}
+                    </div>
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #f3f4f6">
+                        <small style="color:var(--text-gray); font-weight:600">THỐNG KÊ NHANH</small>
+                        <div style="margin-top:10px; display:flex; justify-content:space-between; font-size:0.9rem">
+                            <span>Ngày cao nhất:</span>
+                            <span style="font-weight:700; color:var(--success)">${maxRevenue.toLocaleString()}đ</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
+
+        // Initialize Chart
+        const ctx = document.getElementById('revenueChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Doanh thu',
+                    data: revenueData,
+                    borderColor: '#10B981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#10B981',
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { display: false },
+                        ticks: {
+                            callback: function(value) {
+                                if (value >= 1000000) return (value / 1000000) + 'M';
+                                if (value >= 1000) return (value / 1000) + 'K';
+                                return value;
+                            }
+                        }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
     },
 
     commonList: async (type, title, endpoint, cols, mapper) => {
@@ -642,7 +791,7 @@ const renderers = {
     
     products: () => renderers.commonList('product', 'Sản phẩm', '/Product', ['ID', 'Ảnh', 'Tên sản phẩm', 'Giá', 'Tồn kho'], i => `
         <td>#${i.id}</td>
-        <td><img src="${i.imageUrl || 'https://placehold.co/50'}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #eee"></td>
+        <td><img src="${getFullUrl(i.imageUrl)}" style="width:40px; height:40px; object-fit:cover; border-radius:6px; border:1px solid #eee"></td>
         <td><strong>${i.name}</strong></td>
         <td>${i.price.toLocaleString()}đ</td>
         <td>${i.stockQuantity}</td>

@@ -14,16 +14,19 @@ namespace NguyenThiCamTu_2123110472.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> UploadImage(IFormFile file)
+        public async Task<IActionResult> UploadImage([FromForm] IFormFile file)
         {
             if (file == null || file.Length == 0)
                 return BadRequest("No file uploaded.");
 
-            var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads");
+            var uploadsFolder = Path.Combine(_environment.ContentRootPath, "uploads");
             if (!Directory.Exists(uploadsFolder))
                 Directory.CreateDirectory(uploadsFolder);
 
-            var fileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+            var extension = Path.GetExtension(file.FileName);
+            if (string.IsNullOrEmpty(extension)) extension = ".jpg"; // Default extension
+
+            var fileName = Guid.NewGuid().ToString() + extension;
             var filePath = Path.Combine(uploadsFolder, fileName);
 
             using (var stream = new FileStream(filePath, FileMode.Create))
@@ -31,7 +34,8 @@ namespace NguyenThiCamTu_2123110472.Controllers
                 await file.CopyToAsync(stream);
             }
 
-            var url = $"{Request.Scheme}://{Request.Host}/uploads/{fileName}";
+            // Trả về đường dẫn tương đối để linh hoạt hơn (không phụ thuộc Host/Scheme)
+            var url = $"/uploads/{fileName}";
             return Ok(new { url });
         }
     }

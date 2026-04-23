@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, DollarSign, Calendar, AlertCircle, Loader2, Check, X, ArrowRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getServices } from '../services/api';
+import { getServices, getImageUrl } from '../services/api';
 
 const Services = () => {
   const [services, setServices] = useState([]);
@@ -72,7 +72,7 @@ const Services = () => {
                 className={`card !p-0 overflow-hidden flex flex-col md:flex-row group cursor-pointer transition-all duration-300 ${selectedIds.includes(service.id) ? 'ring-2 ring-[#d4af37] scale-[1.02] shadow-2xl' : ''}`}
               >
                 <div className="md:w-1/2 overflow-hidden h-64 md:h-auto bg-gray-100 relative">
-                  <img src={service.imageUrl || "/massage.png"} alt={service.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                  <img src={getImageUrl(service.imageUrl)} alt={service.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                   {selectedIds.includes(service.id) && (
                     <div className="absolute inset-0 bg-[#064e3b]/40 flex items-center justify-center">
                       <div className="bg-[#d4af37] text-white p-3 rounded-full">

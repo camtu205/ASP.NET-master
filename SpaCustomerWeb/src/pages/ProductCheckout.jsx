@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShoppingBag, Truck, CreditCard, MapPin, User, Phone, ChevronRight } from 'lucide-react';
 import { useCart } from '../context/CartContext';
-import { api } from '../services/api';
+import { api, getImageUrl } from '../services/api';
 import { toast } from 'react-hot-toast';
 
 const ProductCheckout = () => {
@@ -171,7 +171,7 @@ const ProductCheckout = () => {
                         <div className="space-y-6 mb-8 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
                             {cartItems.map(item => (
                                 <div key={item.id} className="flex gap-4 items-center">
-                                    <img src={item.imageUrl || "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=100"} alt={item.name} className="w-20 h-20 rounded-2xl object-cover border border-gray-100" />
+                                    <img src={getImageUrl(item.imageUrl)} alt={item.name} className="w-20 h-20 rounded-2xl object-cover border border-gray-100" />
                                     <div className="flex-1">
                                         <h4 className="font-bold text-gray-800">{item.name}</h4>
                                         <p className="text-sm text-gray-500">Số lượng: {item.quantity}</p>

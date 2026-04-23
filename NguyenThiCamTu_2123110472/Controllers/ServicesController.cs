@@ -12,10 +12,12 @@ namespace NguyenThiCamTu_2123110472.Controllers
     public class ServicesController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IWebHostEnvironment _environment;
 
-        public ServicesController(AppDbContext context)
+        public ServicesController(AppDbContext context, IWebHostEnvironment environment)
         {
             _context = context;
+            _environment = environment;
         }
 
         [AllowAnonymous]
@@ -36,8 +38,23 @@ namespace NguyenThiCamTu_2123110472.Controllers
 
         [HttpPost]
         [Authorize(Roles = "Admin")]
-        public async Task<ActionResult<Service>> PostService(Service service)
+        public async Task<ActionResult<Service>> PostService([FromForm] Service service, IFormFile? imageFile)
         {
+            if (imageFile != null && imageFile.Length > 0)
+            {
+                var uploadsFolder = Path.Combine(_environment.ContentRootPath, "uploads");
+                if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
+
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
+                var filePath = Path.Combine(uploadsFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await imageFile.CopyToAsync(stream);
+                }
+                service.ImageUrl = "/uploads/" + fileName;
+            }
+
             _context.Services.Add(service);
             await _context.SaveChangesAsync();
             return CreatedAtAction("GetService", new { id = service.Id }, service);
@@ -45,9 +62,25 @@ namespace NguyenThiCamTu_2123110472.Controllers
 
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> PutService(int id, Service service)
+        public async Task<IActionResult> PutService(int id, [FromForm] Service service, IFormFile? imageFile)
         {
             if (id != service.Id) return BadRequest();
+
+            if (imageFile != null && imageFile.Length > 0)
+            {
+                var uploadsFolder = Path.Combine(_environment.ContentRootPath, "uploads");
+                if (!Directory.Exists(uploadsFolder)) Directory.CreateDirectory(uploadsFolder);
+
+                var fileName = Guid.NewGuid().ToString() + Path.GetExtension(imageFile.FileName);
+                var filePath = Path.Combine(uploadsFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await imageFile.CopyToAsync(stream);
+                }
+                service.ImageUrl = "/uploads/" + fileName;
+            }
+
             _context.Entry(service).State = EntityState.Modified;
 
             try

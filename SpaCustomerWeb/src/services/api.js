@@ -1,5 +1,11 @@
 const BASE_URL = 'https://asp-net-master.onrender.com/api';
 
+export const getImageUrl = (url) => {
+  if (!url) return 'https://placehold.co/400x500?text=Ctus+Spa';
+  if (url.startsWith('http')) return url;
+  return BASE_URL.replace('/api', '') + (url.startsWith('/') ? url : '/' + url);
+};
+
 export const apiFetch = async (endpoint, options = {}) => {
   const token = localStorage.getItem('spa_token');
   const headers = {

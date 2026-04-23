@@ -243,7 +243,7 @@ const Booking = () => {
 
       <div className="container max-w-5xl">
         <div className="text-center mb-12">
-          <h2 className="text-sm uppercase tracking-[0.3em] text-[#d4af37] font-bold mb-2">Trải nghiệm Lumina</h2>
+          <h2 className="text-sm uppercase tracking-[0.3em] text-[#d4af37] font-bold mb-2">Trải nghiệm Ctus</h2>
           <h1 className="text-4xl font-serif">Đặt lịch trị liệu</h1>
         </div>
         

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingBag, Star, Loader2, AlertCircle } from 'lucide-react';
-import { getProducts } from '../services/api';
+import { getProducts, getImageUrl } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { toast } from 'react-hot-toast';
@@ -63,45 +63,65 @@ const Products = () => {
             <p className="text-[#475569] max-w-2xl mx-auto">Nâng tầm trải nghiệm spa tại nhà với bộ sưu tập sản phẩm hữu cơ cao cấp của chúng tôi.</p>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product, idx) => (
               <motion.div 
                 key={product.id}
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: idx * 0.1 }}
-                className="group flex flex-col"
+                transition={{ delay: idx * 0.03 }}
+                className="group bg-white rounded-3xl p-3 shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col"
               >
-                <div className="relative group overflow-hidden rounded-[2.5rem] bg-white shadow-xl mb-6 aspect-[4/5] border border-gray-100">
+                {/* Image Section */}
+                <div className="relative overflow-hidden rounded-2xl aspect-square mb-4 bg-gray-50">
                   <Link to={`/product/${product.id}`} className="block w-full h-full">
-                    <img src={product.imageUrl || "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=400"} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" />
+                    <img 
+                      src={getImageUrl(product.imageUrl)} 
+                      alt={product.name} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+                    />
                   </Link>
-                  
-                  {/* Small cart button in corner */}
-                  <button 
-                    onClick={(e) => handleQuickAdd(e, product)}
-                    className="absolute top-4 right-4 w-12 h-12 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center text-[#064e3b] shadow-lg hover:bg-pink-500 hover:text-white transition-all duration-300 transform translate-y-[-10px] opacity-0 group-hover:translate-y-0 group-hover:opacity-100 z-10"
-                    title="Thêm vào giỏ"
-                  >
-                    <ShoppingBag size={20} />
-                  </button>
-
-                  <div className="absolute bottom-4 left-4 right-4 pointer-events-none">
-                    <div className="bg-white/80 backdrop-blur-sm px-4 py-2 rounded-2xl inline-block text-[10px] font-bold uppercase tracking-widest text-[#d4af37]">
-                        {product.stockQuantity > 0 ? 'Còn hàng' : 'Hết hàng'}
+                  {product.stockQuantity === 0 && (
+                    <div className="absolute inset-0 bg-white/40 backdrop-blur-sm flex items-center justify-center">
+                      <span className="bg-red-500 text-white text-[10px] px-3 py-1 rounded-full font-bold uppercase">Hết hàng</span>
                     </div>
-                  </div>
+                  )}
                 </div>
 
-                <div className="text-center px-2">
+                {/* Info Section */}
+                <div className="flex-1 px-1">
                   <Link to={`/product/${product.id}`}>
-                    <h3 className="text-lg font-serif mb-2 leading-tight font-medium hover:text-pink-500 transition-colors h-14 line-clamp-2">{product.name}</h3>
+                    <h3 className="text-sm font-bold text-gray-800 line-clamp-2 h-10 mb-1 hover:text-[#064e3b]">
+                      {product.name}
+                    </h3>
                   </Link>
-                  <div className="flex items-center justify-center gap-1 mb-2 text-[#d4af37]">
-                    {[...Array(5)].map((_, i) => <Star key={i} size={12} fill="currentColor" />)}
+                  <p className="text-[#064e3b] font-bold text-base mb-3">
+                    {product.price?.toLocaleString()}đ
+                  </p>
+
+                  {/* Actions - Clearly defined small buttons */}
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={(e) => handleQuickAdd(e, product)}
+                      disabled={product.stockQuantity === 0}
+                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-[#064e3b] py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1"
+                    >
+                      <ShoppingBag size={14} />
+                      Thêm
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        addToCart(product, 1);
+                        window.location.href = '/checkout-product';
+                      }}
+                      disabled={product.stockQuantity === 0}
+                      className="flex-1 bg-[#064e3b] hover:bg-[#053e2f] text-white py-2 rounded-xl text-xs font-bold transition-all"
+                    >
+                      Mua ngay
+                    </button>
                   </div>
-                  <p className="text-[#064e3b] font-bold text-lg">{product.price?.toLocaleString()}đ</p>
                 </div>
               </motion.div>
             ))}

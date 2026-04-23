@@ -13,11 +13,15 @@ import PaymentStatus from './pages/PaymentStatus';
 
 import ProductDetail from './pages/ProductDetail';
 import ProductCheckout from './pages/ProductCheckout';
+import Notifications from './pages/Notifications';
 import { CartProvider } from './context/CartContext';
+
+import { Toaster } from 'react-hot-toast';
 
 function App() {
   return (
     <CartProvider>
+      <Toaster position="top-right" />
       <Router>
         <div className="app-container">
           <Navbar />
@@ -38,10 +42,10 @@ function App() {
             </Routes>
           </main>
           <footer style={{ padding: '40px 5%', textAlign: 'center', backgroundColor: 'var(--primary)', color: 'white' }}>
-            <p className="font-serif" style={{ fontSize: '1.5rem', marginBottom: '10px' }}>Lumina Spa</p>
+            <p className="font-serif" style={{ fontSize: '1.5rem', marginBottom: '10px' }}>Ctus Spa</p>
             <p style={{ opacity: 0.8 }}>Relieving stress, restoring balance, renewing you.</p>
             <div style={{ marginTop: '20px', fontSize: '0.9rem', opacity: 0.6 }}>
-              &copy; 2026 Lumina Spa. All rights reserved.
+              &copy; 2026 Ctus Spa. All rights reserved.
             </div>
           </footer>
         </div>

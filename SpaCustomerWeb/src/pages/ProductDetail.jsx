@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ShoppingBag, ArrowLeft, Star, ShieldCheck, Truck, RefreshCw, Loader2 } from 'lucide-react';
-import { api } from '../services/api';
+import { api, getImageUrl } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { toast } from 'react-hot-toast';
 
@@ -64,7 +64,7 @@ const ProductDetail = () => {
                     className="rounded-[3rem] overflow-hidden bg-white shadow-2xl aspect-square"
                 >
                     <img 
-                        src={product.imageUrl || "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&q=80&w=800"} 
+                        src={getImageUrl(product.imageUrl)} 
                         alt={product.name} 
                         className="w-full h-full object-cover"
                     />

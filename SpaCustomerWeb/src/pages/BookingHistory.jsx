@@ -284,7 +284,7 @@ const BookingHistory = () => {
                         <MessageSquare size={32} />
                     </div>
                     <h3 className="text-2xl font-serif">Cảm nhận của bạn</h3>
-                    <p className="text-gray-500 text-sm mt-2">Ý kiến của bạn giúp Lumina Spa hoàn thiện hơn mỗi ngày.</p>
+                    <p className="text-gray-500 text-sm mt-2">Ý kiến của bạn giúp Ctus Spa hoàn thiện hơn mỗi ngày.</p>
                 </div>
 
                 <div className="space-y-6">
