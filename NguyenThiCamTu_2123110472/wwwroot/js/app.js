@@ -55,7 +55,13 @@ async function apiCall(endpoint, method = 'GET', body = null, retries = 2) {
 
     try {
         const response = await fetch(`${API_BASE}${endpoint}`, options);
-        if (response.status === 401) { handleLogout(); throw new Error('Hết phiên làm việc.'); }
+        
+        // Nếu là lỗi 401 và KHÔNG phải đang đăng nhập thì mới báo hết phiên
+        if (response.status === 401 && endpoint !== '/Auth/Login') { 
+            handleLogout(); 
+            throw new Error('Hết phiên làm việc.'); 
+        }
+
         if (!response.ok) {
             let errorText = await response.text();
             let msg = errorText;
