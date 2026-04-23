@@ -24,10 +24,16 @@ namespace NguyenThiCamTu_2123110472.Controllers
         {
             try
             {
-                var userIdStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value;
+                var userIdStr = User.FindFirst("UserId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
                 if (string.IsNullOrEmpty(userIdStr)) return Unauthorized("User ID claim not found.");
                 
-                var userId = int.Parse(userIdStr);
+                if (!int.TryParse(userIdStr, out int userId))
+                {
+                    // If it's still not a number, maybe it's the username? Try to find user by username
+                    var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == userIdStr);
+                    if (user == null) return Unauthorized("Invalid User ID format.");
+                    userId = user.Id;
+                }
                 var role = User.FindFirst(ClaimTypes.Role)?.Value;
 
                 // Admin sees all system notifications (where UserId is 1 or targeted to Admin)
