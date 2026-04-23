@@ -629,10 +629,12 @@ tr:hover {
 
 .chart-card {
     background: white;
-    padding: 24px;
-    border-radius: 24px;
+    padding: 20px;
+    border-radius: 20px;
     box-shadow: var(--shadow);
-    height: 100%;
+    border: 1px solid #f1f5f9;
+    height: auto;
+    min-height: 380px;
 }
 
 .chart-header {
@@ -643,7 +645,7 @@ tr:hover {
 }
 
 .chart-header h3 {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--text-dark);
     margin: 0;

@@ -675,12 +675,12 @@ const renderers = {
                         <h3>Biểu đồ doanh thu (7 ngày qua)</h3>
                         <span class="badge badge-active" style="background:#f0fdf4; color:#166534">Đỉnh điểm: ${peakDay}</span>
                     </div>
-                    <canvas id="revenueChart" height="300"></canvas>
+                    <canvas id="revenueChart" height="250"></canvas>
                 </div>
 
                 <div class="chart-card">
                     <div class="chart-header">
-                        <h3>Dịch vụ yêu thích</h3>
+                        <h3><i class="fas fa-crown" style="color:#d4af37"></i> Dịch vụ yêu thích</h3>
                     </div>
                     <div class="popular-list">
                         ${popularServices.length > 0 ? popularServices.map((s, i) => `
@@ -693,10 +693,9 @@ const renderers = {
                             </div>
                         `).join('') : '<p class="text-gray" style="text-align:center; padding:20px">Chưa có dữ liệu dịch vụ</p>'}
                     </div>
-                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #f3f4f6">
-                        <small style="color:var(--text-gray); font-weight:600">THỐNG KÊ NHANH</small>
-                        <div style="margin-top:10px; display:flex; justify-content:space-between; font-size:0.9rem">
-                            <span>Ngày cao nhất:</span>
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #f3f4f6">
+                        <div style="display:flex; justify-content:space-between; font-size:0.85rem">
+                            <span style="color:var(--text-gray)">Ngày cao nhất:</span>
                             <span style="font-weight:700; color:var(--success)">${maxRevenue.toLocaleString()}đ</span>
                         </div>
                     </div>
@@ -706,6 +705,10 @@ const renderers = {
 
         // Initialize Chart
         const ctx = document.getElementById('revenueChart').getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 250);
+        gradient.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
+        gradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+
         new Chart(ctx, {
             type: 'line',
             data: {
@@ -714,34 +717,47 @@ const renderers = {
                     label: 'Doanh thu',
                     data: revenueData,
                     borderColor: '#10B981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    backgroundColor: gradient,
                     borderWidth: 3,
                     fill: true,
                     tension: 0.4,
-                    pointBackgroundColor: '#10B981',
-                    pointRadius: 4
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#10B981',
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: { padding: { top: 10, bottom: 10 } },
                 plugins: {
-                    legend: { display: false }
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        padding: 12,
+                        titleFont: { size: 14, weight: 'bold' },
+                        bodyFont: { size: 13 },
+                        displayColors: false,
+                        callbacks: {
+                            label: (context) => `Doanh thu: ${context.raw.toLocaleString()}đ`
+                        }
+                    }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
-                        grid: { display: false },
+                        grid: { color: '#f1f5f9', drawBorder: false },
                         ticks: {
-                            callback: function(value) {
-                                if (value >= 1000000) return (value / 1000000) + 'M';
-                                if (value >= 1000) return (value / 1000) + 'K';
-                                return value;
-                            }
+                            color: '#94a3b8',
+                            font: { size: 11 },
+                            callback: (v) => v >= 1000000 ? (v/1000000)+'M' : (v >= 1000 ? (v/1000)+'K' : v)
                         }
                     },
                     x: {
-                        grid: { display: false }
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8', font: { size: 11 } }
                     }
                 }
             }
