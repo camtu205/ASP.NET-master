@@ -399,58 +399,111 @@ async function openCRUDModal(type, id = null) {
     } else if (type === 'appointment') {
         const [staffs, beds] = await Promise.all([apiCall('/Staffs'), apiCall('/Beds')]);
         html += `
-            <div style="padding:10px; background:var(--bg-light); border-radius:12px; margin-bottom:20px; border:1px solid #eee">
-                <div style="display:grid; grid-template-cols: 1fr 1fr; gap:10px; font-size:0.9rem">
-                    <div><strong>Khách hàng:</strong> ${data.customer?.fullName || 'N/A'}</div>
-                    <div><strong>Ngày hẹn:</strong> ${new Date(data.appointmentDate).toLocaleString()}</div>
-                    <div><strong>Tổng tiền:</strong> ${data.totalPrice?.toLocaleString() || 0}đ</div>
-                    <div><strong>Trạng thái:</strong> <span class="badge badge-${data.status.toLowerCase()}">${data.status}</span></div>
+            <div style="background:linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding:20px; border-radius:16px; margin-bottom:25px; border:1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05)">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px">
+                    <div class="info-item">
+                        <small style="color:#64748b; text-transform:uppercase; font-weight:700; font-size:10px; display:block; margin-bottom:4px">Khách hàng</small>
+                        <span style="font-weight:600; color:#1e293b; font-size:1.1rem">${data.customer?.fullName || 'N/A'}</span>
+                    </div>
+                    <div class="info-item">
+                        <small style="color:#64748b; text-transform:uppercase; font-weight:700; font-size:10px; display:block; margin-bottom:4px">Ngày hẹn</small>
+                        <span style="font-weight:600; color:#1e293b">${new Date(data.appointmentDate).toLocaleString('vi-VN')}</span>
+                    </div>
+                    <div class="info-item">
+                        <small style="color:#64748b; text-transform:uppercase; font-weight:700; font-size:10px; display:block; margin-bottom:4px">Giá dịch vụ</small>
+                        <span style="font-weight:700; color:var(--primary); font-size:1.2rem">${data.totalPrice?.toLocaleString() || 0}đ</span>
+                    </div>
+                    <div class="info-item">
+                        <small style="color:#64748b; text-transform:uppercase; font-weight:700; font-size:10px; display:block; margin-bottom:4px">Trạng thái</small>
+                        <span class="badge badge-${data.status.toLowerCase()}" style="font-size:12px; padding:6px 12px">${data.status}</span>
+                    </div>
                 </div>
-                <div style="margin-top:10px"><strong>Dịch vụ:</strong> ${data.appointmentDetails?.map(d => d.service?.name).join(', ') || 'N/A'}</div>
+                <div style="padding-top:15px; border-top:1px solid #e2e8f0">
+                    <small style="color:#64748b; text-transform:uppercase; font-weight:700; font-size:10px; display:block; margin-bottom:4px">Dịch vụ thực hiện</small>
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:8px">
+                        ${data.appointmentDetails?.map(d => `<span style="background:white; padding:4px 10px; border-radius:6px; border:1px solid #e2e8f0; font-size:13px; font-weight:500; color:#334155">${d.service?.name}</span>`).join('') || '<span style="color:#94a3b8">N/A</span>'}
+                    </div>
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px">
+                <div class="input-group">
+                    <label style="font-weight:600">Trạng thái xử lý</label>
+                    <select name="status" style="border-radius:10px">
+                        <option value="Pending" ${data.status === 'Pending' ? 'selected' : ''}>Chờ xác nhận</option>
+                        <option value="Assigned" ${data.status === 'Assigned' ? 'selected' : ''}>Đã phân công</option>
+                        <option value="Done" ${data.status === 'Done' ? 'selected' : ''}>Đã hoàn tất</option>
+                        <option value="Cancelled" ${data.status === 'Cancelled' ? 'selected' : ''}>Đã hủy</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label style="font-weight:600">Kỹ thuật viên</label>
+                    <select name="staffId" style="border-radius:10px">
+                        <option value="">-- Chọn nhân viên --</option>
+                        ${staffs.map(s => `<option value="${s.id}" ${data.staffId === s.id ? 'selected' : ''}>${s.fullName}</option>`).join('')}
+                    </select>
+                </div>
             </div>
             <div class="input-group">
-                <label>Thay đổi trạng thái</label>
-                <select name="status">
-                    <option value="Pending" ${data.status === 'Pending' ? 'selected' : ''}>Chờ xác nhận</option>
-                    <option value="Assigned" ${data.status === 'Assigned' ? 'selected' : ''}>Đã phân công</option>
-                    <option value="Done" ${data.status === 'Done' ? 'selected' : ''}>Đã hoàn tất</option>
-                    <option value="Cancelled" ${data.status === 'Cancelled' ? 'selected' : ''}>Đã hủy</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <label>Gán nhân viên</label>
-                <select name="staffId">
-                    <option value="">-- Chọn nhân viên --</option>
-                    ${staffs.map(s => `<option value="${s.id}" ${data.staffId === s.id ? 'selected' : ''}>${s.fullName}</option>`).join('')}
-                </select>
-            </div>
-            <div class="input-group">
-                <label>Gán giường</label>
-                <select name="bedId">
+                <label style="font-weight:600">Giường & Phòng</label>
+                <select name="bedId" style="border-radius:10px">
                     <option value="">-- Chọn giường --</option>
-                    ${beds.map(b => `<option value="${b.id}" ${data.bedId === b.id ? 'selected' : ''}>${b.bedName} (${b.room?.roomName})</option>`).join('')}
+                    ${beds.map(b => `<option value="${b.id}" ${data.bedId === b.id ? 'selected' : ''}>${b.bedName} (${b.room?.roomName} - ${b.room?.roomType?.name})</option>`).join('')}
                 </select>
             </div>
-            <p style="font-size:11px; color:var(--text-gray); font-style:italic">* Lưu ý: Bạn có thể nhấn Sửa để cập nhật các thông tin này.</p>
         `;
     } else if (type === 'order') {
         html += `
-            <div style="padding:20px; background:white; border-radius:15px; border:1px solid #eee">
-                <h4 style="margin-bottom:15px; color:var(--primary)">Hóa đơn #${data.id}</h4>
-                <div style="margin-bottom:10px"><strong>Khách hàng:</strong> ${data.customer?.fullName || 'N/A'}</div>
-                <div style="margin-bottom:20px"><strong>Ngày thanh toán:</strong> ${new Date(data.orderDate).toLocaleString()}</div>
-                <table style="width:100%; border-collapse:collapse">
-                    <thead><tr style="border-bottom:2px solid #eee; text-align:left"><th style="padding:10px 0">Nội dung</th><th>Giá</th></tr></thead>
+            <div style="background:white; padding:30px; border-radius:20px; box-shadow:0 10px 25px rgba(0,0,0,0.05); border:1px solid #f1f5f9; font-family:'Inter', sans-serif">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:30px; border-bottom:2px solid #f8fafc; padding-bottom:20px">
+                    <div>
+                        <h2 style="color:var(--primary); font-size:1.8rem; margin:0">HÓA ĐƠN</h2>
+                        <span style="color:#94a3b8; font-size:0.9rem; font-weight:500">Mã đơn: #${data.id}</span>
+                    </div>
+                    <div style="text-align:right">
+                        <div style="font-weight:700; color:#1e293b">Ctus Spa & Beauty</div>
+                        <div style="color:#64748b; font-size:0.8rem">Ngày: ${new Date(data.orderDate).toLocaleDateString('vi-VN')}</div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom:30px">
+                    <small style="color:#94a3b8; text-transform:uppercase; font-weight:700; letter-spacing:1px; font-size:11px">Khách hàng</small>
+                    <div style="font-size:1.2rem; font-weight:700; color:#1e293b; margin-top:5px">${data.customer?.fullName || 'Khách hàng'}</div>
+                    <div style="color:#64748b; font-size:0.9rem">${data.customer?.phoneNumber || ''}</div>
+                </div>
+
+                <table style="width:100%; border-collapse:collapse; margin-bottom:30px">
+                    <thead>
+                        <tr style="text-align:left; color:#94a3b8; font-size:12px; text-transform:uppercase; border-bottom:1px solid #f1f5f9">
+                            <th style="padding:15px 0">Mô tả dịch vụ/Sản phẩm</th>
+                            <th style="padding:15px 0; text-align:right">Thành tiền</th>
+                        </tr>
+                    </thead>
                     <tbody>
-                        ${data.orderDetails?.map(d => `<tr><td style="padding:10px 0">${d.service?.name || d.product?.name || 'Sản phẩm/Dịch vụ'}</td><td>${d.price.toLocaleString()}đ</td></tr>`).join('')}
+                        ${data.orderDetails?.map(d => `
+                            <tr style="border-bottom:1px solid #f8fafc">
+                                <td style="padding:15px 0; font-weight:600; color:#334155">${d.service?.name || d.product?.name || 'Sản phẩm/Dịch vụ'}</td>
+                                <td style="padding:15px 0; text-align:right; font-weight:600; color:#1e293b">${d.price.toLocaleString()}đ</td>
+                            </tr>
+                        `).join('')}
                     </tbody>
-                    <tfoot>
-                        <tr style="border-top:2px solid #eee; font-weight:bold"><td style="padding:15px 0">Tổng cộng</td><td style="font-size:1.2rem; color:var(--primary)">${data.totalAmount.toLocaleString()}đ</td></tr>
-                    </tfoot>
                 </table>
-            </div>
-            <div style="margin-top:20px; text-align:center">
-                <button type="button" class="btn-primary" onclick="window.print()">In hóa đơn</button>
+
+                <div style="background:#f8fafc; padding:20px; border-radius:12px">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px; color:#64748b; font-size:0.9rem">
+                        <span>Tạm tính:</span>
+                        <span>${data.totalAmount.toLocaleString()}đ</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:1.4rem; font-weight:800; color:var(--primary); padding-top:10px; border-top:1px dashed #cbd5e1">
+                        <span>TỔNG CỘNG:</span>
+                        <span>${data.totalAmount.toLocaleString()}đ</span>
+                    </div>
+                </div>
+
+                <div style="margin-top:30px; display:flex; gap:15px; justify-content:center">
+                    <button type="button" class="btn-primary" onclick="window.print()" style="padding:10px 25px; border-radius:10px; display:flex; align-items:center; gap:8px">
+                        <i class="fas fa-print"></i> In hóa đơn
+                    </button>
+                </div>
             </div>
         `;
     } else if (type === 'bed') {
