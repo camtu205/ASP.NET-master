@@ -33,6 +33,7 @@ namespace NguyenThiCamTu_2123110472.Models
         [MaxLength(200)]
         public string? Address { get; set; }
 
+        [JsonIgnore]
         public ICollection<Notification> Notifications { get; set; } = new List<Notification>();
     }
 
@@ -393,6 +394,7 @@ namespace NguyenThiCamTu_2123110472.Models
 
         public int UserId { get; set; }
         [ForeignKey("UserId")]
+        [JsonIgnore]
         public User? User { get; set; }
     }
  
